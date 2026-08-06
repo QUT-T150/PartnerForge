@@ -174,10 +174,20 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.NewValues).HasColumnType("json");
 
-        // Apply snake_case naming to all tables and columns to match schema.sql
+        // Apply snake_case naming to all tables and columns to match schema.sql.
+        // Table names are based on the DbSet property names directly: the relational convention
+        // that does this doesn't run under the InMemory provider (used in tests), which would
+        // otherwise fall back to singular class names and diverge from the MySQL mapping.
+        var dbSetNames = typeof(ApplicationDbContext).GetProperties()
+            .Where(p => p.PropertyType.IsGenericType &&
+                        p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .ToDictionary(p => p.PropertyType.GetGenericArguments()[0], p => p.Name);
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            var tableName = entityType.GetTableName();
+            var tableName = dbSetNames.TryGetValue(entityType.ClrType, out var setName)
+                ? setName
+                : entityType.GetTableName();
             if (tableName != null)
                 entityType.SetTableName(ToSnakeCase(tableName));
 
