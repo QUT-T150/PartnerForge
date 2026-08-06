@@ -9,7 +9,6 @@ import {
   BarChart3,
   Users,
   ShieldAlert,
-  History,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -80,13 +79,6 @@ const TAB_CARDS: TabCard[] = [
     title: "User Management",
     desc: "Add staff accounts, assign roles, manage permissions.",
     href: "/platform?view=users",
-  },
-  {
-    key: "audit",
-    Icon: History,
-    title: "Audit Log",
-    desc: "Browse who changed what and when across every record.",
-    href: "/audit-log",
   },
 ];
 

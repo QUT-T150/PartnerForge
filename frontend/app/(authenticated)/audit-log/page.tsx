@@ -134,6 +134,7 @@ export default function AuditLogPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
 
   const isAdmin = user?.role === "admin";
 
@@ -143,7 +144,10 @@ export default function AuditLogPage() {
       const result = await request<AuditPage>(
         `/auditlog?${filterQuery(filters, page, PAGE_SIZE)}`,
       );
-      if (result) setData(result);
+      if (result) {
+        setData(result);
+        setRefreshedAt(new Date());
+      }
     } finally {
       setLoading(false);
     }
@@ -161,6 +165,21 @@ export default function AuditLogPage() {
     request<string[]>("/auditlog/tables").then((t) => t && setTables(t));
     request<UserOption[]>("/users").then((u) => u && setUsers(u));
   }, [isAdmin]);
+
+  // Writes can happen in other tabs or views while this page is open — refetch
+  // whenever the page regains focus or becomes visible again.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const refetch = () => {
+      if (document.visibilityState === "visible") loadPage();
+    };
+    window.addEventListener("focus", refetch);
+    document.addEventListener("visibilitychange", refetch);
+    return () => {
+      window.removeEventListener("focus", refetch);
+      document.removeEventListener("visibilitychange", refetch);
+    };
+  }, [isAdmin, loadPage]);
 
   function setFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -296,6 +315,14 @@ export default function AuditLogPage() {
           </button>
           <button
             type="button"
+            className="refresh-btn"
+            onClick={loadPage}
+            disabled={loading}
+          >
+            {loading ? "Refreshing…" : "⟳ Refresh"}
+          </button>
+          <button
+            type="button"
             className="export-btn"
             onClick={exportCsv}
             disabled={exporting || !data || data.totalCount === 0}
@@ -303,6 +330,12 @@ export default function AuditLogPage() {
             {exporting ? "Exporting…" : "Export CSV"}
           </button>
         </div>
+
+        {refreshedAt && (
+          <div className="refreshed-at">
+            Last updated {refreshedAt.toLocaleTimeString()}
+          </div>
+        )}
 
         <div className="audit-table-wrap">
           <table className="audit-table">

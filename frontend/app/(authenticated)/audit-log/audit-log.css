@@ -80,6 +80,7 @@
 }
 
 .clear-btn,
+.refresh-btn,
 .export-btn {
   border-radius: 6px;
   padding: 8px 14px;
@@ -90,8 +91,17 @@
   color: #374151;
 }
 
-.export-btn {
+.refresh-btn {
   margin-left: auto;
+  font-weight: 600;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.export-btn {
   background: #002c5f;
   border-color: #002c5f;
   color: white;
@@ -101,6 +111,12 @@
 .export-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.refreshed-at {
+  color: #9ca3af;
+  font-size: 12px;
+  margin: -8px 2px 10px;
 }
 
 .audit-table-wrap {
