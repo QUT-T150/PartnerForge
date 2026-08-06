@@ -1,0 +1,282 @@
+.audit-page {
+  background: #f3f4f6;
+  min-height: calc(100vh - 64px);
+}
+
+.audit-page .container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.audit-page .page-title {
+  margin-bottom: 22px;
+}
+
+.audit-page .page-title h1 {
+  font-size: 24px;
+  color: #002c5f;
+  margin-bottom: 5px;
+}
+
+.audit-page .page-title p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.audit-denied {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 32px;
+  max-width: 520px;
+}
+
+.audit-denied h1 {
+  font-size: 20px;
+  color: #002c5f;
+  margin-bottom: 8px;
+}
+
+.audit-denied p {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.audit-denied a {
+  color: #002c5f;
+  font-weight: 600;
+}
+
+.audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.audit-toolbar select,
+.audit-toolbar input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: white;
+  color: #111827;
+}
+
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.clear-btn,
+.export-btn {
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+}
+
+.export-btn {
+  margin-left: auto;
+  background: #002c5f;
+  border-color: #002c5f;
+  color: white;
+  font-weight: 600;
+}
+
+.export-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.audit-table-wrap {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.audit-table th,
+.audit-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.audit-table th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.audit-row {
+  cursor: pointer;
+}
+
+.audit-row:hover td {
+  background: #f9fafb;
+}
+
+.audit-empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 28px !important;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.record-id {
+  color: #6b7280;
+}
+
+.system-actor {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.expander {
+  color: #9ca3af;
+  width: 30px;
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.action-insert {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.action-update {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.action-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.action-soft_delete {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.action-restore {
+  background: #ccfbf1;
+  color: #115e59;
+}
+
+.diff-row td {
+  background: #f9fafb;
+  padding: 14px 18px;
+}
+
+.diff-wrap {
+  overflow-x: auto;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.diff-table th,
+.diff-table td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.diff-table th {
+  background: #f9fafb;
+  font-family: inherit;
+  color: #6b7280;
+}
+
+.diff-key {
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.diff-changed td {
+  background: #fef9c3;
+}
+
+.diff-empty {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.diff-meta {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+  color: #9ca3af;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.audit-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.audit-pager button {
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.audit-pager button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
