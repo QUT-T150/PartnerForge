@@ -20,7 +20,7 @@ public class AuditLogControllerTests
             .Cast<AuthorizeAttribute>()
             .Single();
 
-        Assert.Equal("admin", attribute.Roles);
+        Assert.Equal("admin,course_organiser", attribute.Roles);
     }
 
     [Fact]
@@ -96,13 +96,14 @@ public class AuditLogControllerTests
         AuditLogController controller,
         string? action = null,
         string? tableName = null,
+        Guid? recordId = null,
         Guid? changedBy = null,
         DateTime? from = null,
         DateTime? to = null,
         int page = 1,
         int pageSize = 25)
     {
-        var result = await controller.GetAuditLog(action, tableName, changedBy, from, to, page, pageSize);
+        var result = await controller.GetAuditLog(action, tableName, recordId, changedBy, from, to, page, pageSize);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         return Assert.IsType<AuditLogPageDto>(ok.Value);
     }

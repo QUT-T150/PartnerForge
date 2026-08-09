@@ -12,7 +12,8 @@ namespace Qut.PartnerForge.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "admin,course_organiser")]
+
 public class AuditLogController : ControllerBase
 {
     private const int MaxPageSize = 1000;
@@ -42,6 +43,7 @@ public class AuditLogController : ControllerBase
     public async Task<ActionResult<AuditLogPageDto>> GetAuditLog(
         [FromQuery] string? action,
         [FromQuery] string? tableName,
+        [FromQuery] Guid? recordId,
         [FromQuery] Guid? changedBy,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
@@ -58,7 +60,8 @@ public class AuditLogController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(tableName))
             query = query.Where(a => a.TableName == tableName);
-
+          if (recordId.HasValue)
+              query = query.Where(a => a.RecordId == recordId.Value);
         if (changedBy.HasValue)
             query = query.Where(a => a.ChangedBy == changedBy.Value);
 
