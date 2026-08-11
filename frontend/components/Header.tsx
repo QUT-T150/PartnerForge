@@ -21,9 +21,11 @@ export default function Header({ subtitle }: HeaderProps) {
   const currentView = searchParams.get("view") || "";
   const isOnDashboard = pathname === "/dashboard";
   const isOnPlatform = pathname === "/platform";
+  const isOnAnalytics = pathname === "/analytics";
 
   function navActive(target: string): string {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
+    if (target === "/analytics") return isOnAnalytics ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
   }
@@ -69,6 +71,11 @@ export default function Header({ subtitle }: HeaderProps) {
           >
             Applications
           </Link>
+          {user.role !== "industry_partner" && (
+            <Link href="/analytics" className={navActive("/analytics")}>
+              Analytics
+            </Link>
+          )}
           {user.role === "admin" && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management

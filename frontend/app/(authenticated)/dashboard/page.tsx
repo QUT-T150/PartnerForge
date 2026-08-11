@@ -71,7 +71,7 @@ const TAB_CARDS: TabCard[] = [
     Icon: BarChart3,
     title: "Analytics",
     desc: "Reports on partner activity, intake trends, and engagement.",
-    href: "#",
+    href: "/analytics",
   },
   {
     key: "users",

@@ -1,0 +1,197 @@
+.figure {
+  position: relative;
+  margin: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.gridLine {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.axisLine {
+  stroke: #d1d5db;
+  stroke-width: 1;
+}
+
+.tickLabel {
+  fill: #6b7280;
+  font-size: 11px;
+}
+
+.tickLabelCenter {
+  fill: #6b7280;
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.hitArea {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.hitAreaActive {
+  fill: #111827;
+  opacity: 0.04;
+  cursor: pointer;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 150px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  color: #111827;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.7;
+}
+
+.tooltipSwatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipLabel {
+  color: #6b7280;
+  flex: 1;
+}
+
+.tooltipValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tooltipTotal {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  padding-left: 4px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* Ranked horizontal bars — plain HTML so labels stay real text. */
+.rankedList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rankedRow {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.rankedLabel {
+  font-size: 13px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankedMeta {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankedTrack {
+  position: relative;
+  height: 18px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.rankedFill {
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  min-width: 3px;
+  transition: filter 0.12s;
+}
+
+.rankedRow:hover .rankedFill {
+  filter: brightness(0.92);
+}
+
+.rankedValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: right;
+}
+
+.empty {
+  padding: 28px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  border-radius: 8px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

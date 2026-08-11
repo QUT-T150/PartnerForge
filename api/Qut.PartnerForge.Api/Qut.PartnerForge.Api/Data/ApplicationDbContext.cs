@@ -1,4 +1,5 @@
 using Qut.PartnerForge.Api.Models;
+using Qut.PartnerForge.Api.Models.Analytics;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -56,6 +57,15 @@ public class ApplicationDbContext : DbContext
 
     /// <summary>User-owned named filter presets stored as JSON.</summary>
     public DbSet<SavedFilter> SavedFilters { get; set; }
+
+    /// <summary>Read-only per-organisation rollup from the <c>v_organisation_stats</c> view.</summary>
+    public DbSet<OrganisationStat> OrganisationStats { get; set; }
+
+    /// <summary>Read-only per-intake rollup from the <c>v_intake_summary</c> view.</summary>
+    public DbSet<IntakeSummary> IntakeSummaries { get; set; }
+
+    /// <summary>Read-only partner ranking from the <c>v_most_active_partners_3yr</c> view.</summary>
+    public DbSet<MostActivePartner> MostActivePartners { get; set; }
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -173,6 +183,13 @@ public class ApplicationDbContext : DbContext
             .Property(a => a.OldValues).HasColumnType("json");
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.NewValues).HasColumnType("json");
+
+        // Analytics views — keyless, read-only, defined in schema.sql.
+        // Mapped with ToView so EF never attempts to create or write to them; the
+        // snake_case loop below supplies the column names, which already match.
+        modelBuilder.Entity<OrganisationStat>().HasNoKey().ToView("v_organisation_stats");
+        modelBuilder.Entity<IntakeSummary>().HasNoKey().ToView("v_intake_summary");
+        modelBuilder.Entity<MostActivePartner>().HasNoKey().ToView("v_most_active_partners_3yr");
 
         // Apply snake_case naming to all tables and columns to match schema.sql
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
