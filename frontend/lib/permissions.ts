@@ -1,11 +1,11 @@
 export type Role = "admin" | "course_organiser" | "industry_partner";
-export type EntityType = "partner" | "project" | "application" | "event" | "user";
+export type EntityType = "partner" | "project" | "application" | "event" | "user" | "upload";
 export type PermLevel = "rw" | "r" | "no";
 
 export const PERMISSIONS: Record<Role, Record<string, PermLevel>> = {
-  admin: { partners: "rw", projects: "rw", events: "rw", applications: "rw", analytics: "r", users: "rw" },
-  course_organiser: { partners: "rw", projects: "rw", events: "rw", applications: "r", analytics: "r", users: "no" },
-  industry_partner: { partners: "r", projects: "r", events: "r", applications: "rw", analytics: "no", users: "no" },
+  admin: { partners: "rw", projects: "rw", events: "rw", applications: "rw", analytics: "r", users: "rw" , upload: "rw"},
+  course_organiser: { partners: "rw", projects: "rw", events: "rw", applications: "r", analytics: "r", users: "no" , upload: "no"},
+  industry_partner: { partners: "r", projects: "r", events: "r", applications: "rw", analytics: "no", users: "no" , upload: "no"},
 };
 
 export const PERM_LABEL: Record<PermLevel, { text: string; cls: string }> = {
@@ -30,6 +30,7 @@ export function canDelete(role: Role, type: EntityType): boolean {
   if (type === "partner" || type === "project") return role === "admin";
   if (type === "application") return role === "admin" || role === "course_organiser";
   if (type === "event" || type === "user") return role === "admin";
+  if (type === "upload") return role === "admin";
   return false;
 }
 

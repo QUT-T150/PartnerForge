@@ -184,6 +184,107 @@ public class EventsController : ControllerBase
     }
 
     /// <summary>
+    /// Creates an event attendance RSVP record.
+    /// </summary>
+    /// <param name="request">Attendance payload.</param>
+    [HttpPost("attendances")]
+    [Authorize(Roles = "admin,course_organiser")]
+    public async Task<IActionResult> CreateAttendance([FromBody] SaveEventAttendanceRequest request)
+    {
+        // 1. Resolve or create Organisation
+        Organisation? org = null;
+        if (!string.IsNullOrWhiteSpace(request.OrganisationName))
+        {
+            var cleanOrgName = request.OrganisationName.Trim();
+            org = await _context.Organisations
+                .FirstOrDefaultAsync(o => o.Name.ToLower() == cleanOrgName.ToLower() && o.DeletedAt == null);
+
+            if (org == null)
+            {
+                org = new Organisation
+                {
+                    Id = Guid.NewGuid(),
+                    Name = cleanOrgName,
+                    PartnershipStatus = "prospect",
+                    SubmissionStatus = "approved",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.Organisations.Add(org);
+            }
+        }
+
+        if (org == null)
+        {
+            org = await _context.Organisations
+                .FirstOrDefaultAsync(o => o.Name == "General Partner" && o.DeletedAt == null);
+
+            if (org == null)
+            {
+                org = new Organisation
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "General Partner",
+                    PartnershipStatus = "prospect",
+                    SubmissionStatus = "approved",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.Organisations.Add(org);
+            }
+        }
+
+        // 2. Resolve or create Event
+        Event? ev = null;
+        var eventTitle = !string.IsNullOrWhiteSpace(request.EventsInvitedTo)
+            ? request.EventsInvitedTo.Trim()
+            : "General Industry Event";
+
+        ev = await _context.Events
+            .FirstOrDefaultAsync(e => e.Name.ToLower() == eventTitle.ToLower() && e.DeletedAt == null);
+
+        if (ev == null)
+        {
+            ev = new Event
+            {
+                Id = Guid.NewGuid(),
+                Name = eventTitle,
+                EventDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = CurrentUserId(),
+                UpdatedBy = CurrentUserId()
+            };
+            _context.Events.Add(ev);
+        }
+
+        var attendance = new EventAttendance
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            OrganisationId = org.Id,
+            FirstName = request.FirstName,
+            BestContactName = request.BestContactName,
+            PositionTitle = request.PositionTitle,
+            Email = request.Email,
+            ListName = request.ListName,
+            Source = request.Source,
+            EventsInvitedTo = request.EventsInvitedTo,
+            Response = request.Response,
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedBy = CurrentUserId(),
+            UpdatedBy = CurrentUserId()
+        };
+
+        _context.EventAttendances.Add(attendance);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { id = attendance.Id, eventId = ev.Id, organisationId = org.Id });
+    }
+
+    /// <summary>
     /// Admins see all events; course organisers match their faculty or cross-faculty events (<c>FacultyId</c> null).
     /// </summary>
     private IQueryable<Event> ApplyEventScope(IQueryable<Event> query)
@@ -206,3 +307,4 @@ public class EventsController : ControllerBase
     private Guid? CurrentUserId() =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
 }
+

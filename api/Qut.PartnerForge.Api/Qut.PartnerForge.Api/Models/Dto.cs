@@ -210,6 +210,21 @@ public record SaveEventRequest(
     string? Notes
 );
 
+/// <summary>Payload describing an event attendance / RSVP entry.</summary>
+public record SaveEventAttendanceRequest(
+    string? OrganisationName,
+    string? FirstName,
+    string? BestContactName,
+    string? PositionTitle,
+    string? Email,
+    string? ListName,
+    string? Source,
+    string? EventsInvitedTo,
+    string? Response,
+    string? Notes
+);
+
+
 /// <summary>Admin directory row for workforce accounts.</summary>
 public record UserListItemDto(
     Guid Id,
