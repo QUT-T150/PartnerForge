@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeKey, coerce, buildRow, TABLE_CONFIGS } from "./upload";
+import { normalizeKey, coerce, buildRow, TABLE_CONFIGS } from "./upload-core";
 import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
