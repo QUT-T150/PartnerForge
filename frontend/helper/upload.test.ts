@@ -144,6 +144,15 @@ describe("CSV Importer Unit & Performance Tests", () => {
   describe("Robustness & High Volume Performance Benchmark", () => {
     it("parses and builds 500 multi-year rows efficiently (< 50ms)", () => {
       const csvPath = path.resolve(__dirname, "../../test-data/csv-samples/large_volume_500rows.csv");
+      if (!fs.existsSync(csvPath)) {
+        const dir = path.dirname(csvPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const lines = ["Project_id,Registration ID,Organisation Name,Address,ABN,Industy Partner Contact Name(s),Position Title,Email,Phone"];
+        for (let i = 1; i <= 500; i++) {
+          lines.push(`"PRJ-2024-${i}","REG-2024-${i}","Benchmark Org ${i}","${i} Tech Parkway","1000000000${i}","Contact ${i}","Director","contact${i}@org.com","0730000000"`);
+        }
+        fs.writeFileSync(csvPath, lines.join("\n"), "utf8");
+      }
       const csvContent = fs.readFileSync(csvPath, "utf8");
 
       const startTime = performance.now();
