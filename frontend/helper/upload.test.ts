@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { normalizeKey, coerce, buildRow, TABLE_CONFIGS } from "./upload-core";
+import {
+  normalizeKey,
+  coerce,
+  buildRow,
+  TABLE_CONFIGS,
+  generateSampleCsv,
+  generateReportCsv,
+} from "./upload-core";
 import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
@@ -201,6 +208,31 @@ describe("CSV Importer Unit & Performance Tests", () => {
       const row2 = buildRow(parsed.data[1], config.fields);
       expect(row2.error).toBeUndefined();
       expect(row2.body.Name).toBe("Acme & Co, (Australia) Ltd");
+    });
+  });
+
+  describe("CSV Sample & Report Generators", () => {
+    it("generates valid CSV sample template for partners", () => {
+      const sample = generateSampleCsv("partners");
+      expect(sample).toContain("organisation name");
+      expect(sample).toContain("TechCorp Australia");
+    });
+
+    it("generates structured downloadable report CSV for dry-run simulation", () => {
+      const state = {
+        status: "partial" as const,
+        message: "[Dry Run Simulation] 8 of 10 rows valid.",
+        total: 10,
+        succeeded: 8,
+        failed: 2,
+        errors: ["Row 3: Missing required field \"Name\""],
+        dryRun: true,
+      };
+
+      const report = generateReportCsv(state, "Industry Partners");
+      expect(report).toContain("Import Report - Industry Partners");
+      expect(report).toContain('"Dry Run","YES (Simulation Only)"');
+      expect(report).toContain('"ERROR","Row 3: Missing required field ""Name"""');
     });
   });
 });

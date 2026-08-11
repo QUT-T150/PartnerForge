@@ -59,6 +59,8 @@ export async function uploadFileAction(
   const errors: string[] = [];
   const validBodies: Record<string, unknown>[] = [];
 
+  const isDryRun = formData.get("dryRun") === "true";
+
   for (let i = 0; i < rows.length; i++) {
     const rowNumber = i + 2; // account for header row + 1-indexing
     const { body, error } = buildRow(rows[i], config.fields);
@@ -67,6 +69,20 @@ export async function uploadFileAction(
       continue;
     }
     validBodies.push(body);
+  }
+
+  if (isDryRun) {
+    const failed = rows.length - validBodies.length;
+    const status = failed === 0 ? "success" : validBodies.length === 0 ? "error" : "partial";
+    return {
+      status,
+      message: `[Dry Run Simulation] ${validBodies.length} of ${rows.length} rows valid for ${config.label}. No database changes were made.`,
+      total: rows.length,
+      succeeded: validBodies.length,
+      failed,
+      errors: errors.slice(0, 20),
+      dryRun: true,
+    };
   }
 
   if (validBodies.length > 0) {

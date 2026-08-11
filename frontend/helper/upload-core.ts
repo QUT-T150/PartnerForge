@@ -114,6 +114,7 @@ export interface UploadState {
   succeeded?: number;
   failed?: number;
   errors?: string[];
+  dryRun?: boolean;
 }
 
 export function coerce(raw: string | undefined, type: FieldType, defaultValue?: unknown): unknown {
@@ -188,4 +189,57 @@ export function buildRow(
   }
 
   return { body };
+}
+
+export function generateSampleCsv(tableKey: string): string {
+  const config = TABLE_CONFIGS[tableKey];
+  if (!config) return "";
+
+  const headers = config.fields.map((f) => f.aliases?.[0] || f.key);
+  const sampleValues = config.fields.map((f) => {
+    if (f.key === "Name" || f.key === "OrganisationName") return "TechCorp Australia";
+    if (f.key === "Title" || f.key === "ProposedTitle") return "Autonomous Swarm Drone Navigation";
+    if (f.key === "Description" || f.key === "ProposedDescription") return "Edge-computing flight path optimization";
+    if (f.key === "Email" || f.key === "Business Email") return "contact@techcorp.com.au";
+    if (f.key === "Phone" || f.key === "Business Phone") return "0731234567";
+    if (f.key === "PrimaryContactName" || f.key === "BestContactName") return "Sarah Jenkins";
+    if (f.key === "PrimaryContactPosition" || f.key === "PositionTitle") return "VP of Technology";
+    if (f.key === "AddressLine1" || f.key === "Address") return "123 Innovation Way, Brisbane QLD 4000";
+    if (f.key === "Abn") return "12345678901";
+    if (f.key === "RegistrationId") return "REG-2026-001";
+    if (f.key === "ProjectPartnerAgreement") return "Signed PPA 2026";
+    if (f.key === "StudentProjectAgreement") return "Full IP Assignment";
+    if (f.key === "ListName") return "Research Symposium 2026";
+    if (f.key === "Source") return "Alumni Network";
+    if (f.key === "EventsInvitedTo") return "QUT IT Showcase 2026";
+    if (f.key === "Response") return "Attending";
+    if (f.type === "int") return "2026";
+    if (f.type === "bool") return "true";
+    return "Sample Data";
+  });
+
+  return [headers.join(","), sampleValues.map((v) => `"${v}"`).join(",")].join("\n");
+}
+
+export function generateReportCsv(state: UploadState, tableLabel: string): string {
+  const lines = [
+    `"Import Report - ${tableLabel}","Generated: ${new Date().toISOString()}"`,
+    `"Status","${state.status.toUpperCase()}"`,
+    `"Total Rows","${state.total || 0}"`,
+    `"Succeeded","${state.succeeded || 0}"`,
+    `"Failed","${state.failed || 0}"`,
+    `"Dry Run","${state.dryRun ? "YES (Simulation Only)" : "NO"}"`,
+    "",
+    `"Log Type","Details"`,
+  ];
+
+  if (state.errors && state.errors.length > 0) {
+    for (const err of state.errors) {
+      lines.push(`"ERROR","${err.replace(/"/g, '""')}"`);
+    }
+  } else {
+    lines.push(`"SUCCESS","All ${state.succeeded || 0} rows imported successfully without errors."`);
+  }
+
+  return lines.join("\n");
 }
