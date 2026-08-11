@@ -19,13 +19,15 @@ interface FieldSpec {
 interface TableConfig {
   label: string;
   endpoint: string;
+  batchEndpoint?: string;
   fields: FieldSpec[];
 }
 
-const TABLE_CONFIGS: Record<string, TableConfig> = {
+export const TABLE_CONFIGS: Record<string, TableConfig> = {
   partners: {
     label: "Industry Partners",
     endpoint: "/api/Organisations",
+    batchEndpoint: "/api/Organisations/batch",
     fields: [
       { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name"] },
       { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id"] },
@@ -42,6 +44,7 @@ const TABLE_CONFIGS: Record<string, TableConfig> = {
   projects: {
     label: "Projects",
     endpoint: "/api/Projects",
+    batchEndpoint: "/api/Projects/batch",
     fields: [
       { key: "Title", type: "string", required: true, aliases: ["project title", "title", "name"] },
       { key: "Description", type: "string", aliases: ["project description", "description", "summary", "overview"] },
@@ -56,6 +59,7 @@ const TABLE_CONFIGS: Record<string, TableConfig> = {
   organisation: {
     label: "Organisation",
     endpoint: "/api/Organisations",
+    batchEndpoint: "/api/Organisations/batch",
     fields: [
       { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name"] },
       { key: "AddressLine1", type: "string", aliases: ["address", "street address", "location", "office address"] },
@@ -118,7 +122,7 @@ export interface UploadState {
   errors?: string[];
 }
 
-function coerce(raw: string | undefined, type: FieldType, defaultValue?: unknown): unknown {
+export function coerce(raw: string | undefined, type: FieldType, defaultValue?: unknown): unknown {
   const value = raw?.trim();
   if (!value) return defaultValue;
 
@@ -137,11 +141,20 @@ function coerce(raw: string | undefined, type: FieldType, defaultValue?: unknown
   }
 }
 
-function normalizeKey(str: string): string {
-  return str.trim().toLowerCase().replace(/[\s\-_']+/g, " ");
+const normalizeCache = new Map<string, string>();
+
+export function normalizeKey(str: string): string {
+  const cached = normalizeCache.get(str);
+  if (cached !== undefined) return cached;
+
+  const normalized = str.trim().toLowerCase().replace(/[\s\-_']+/g, " ");
+  if (normalizeCache.size < 2000) {
+    normalizeCache.set(str, normalized);
+  }
+  return normalized;
 }
 
-function buildRow(
+export function buildRow(
   row: Record<string, string>,
   fields: FieldSpec[],
 ): { body: Record<string, unknown>; error?: string } {
@@ -225,6 +238,7 @@ export async function uploadFileAction(
 
   let succeeded = 0;
   const errors: string[] = [];
+  const validBodies: Record<string, unknown>[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const rowNumber = i + 2; // account for header row + 1-indexing
@@ -233,25 +247,54 @@ export async function uploadFileAction(
       errors.push(`Row ${rowNumber}: ${error}`);
       continue;
     }
+    validBodies.push(body);
+  }
 
-    try {
-      const res = await fetch(new URL(config.endpoint, BACKEND_URL), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
+  if (validBodies.length > 0) {
+    if (config.batchEndpoint) {
+      try {
+        const res = await fetch(new URL(config.batchEndpoint, BACKEND_URL), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(validBodies),
+        });
 
-      if (res.ok) {
-        succeeded++;
-      } else {
-        const detail = await res.text();
-        errors.push(`Row ${rowNumber}: ${res.status} ${detail || res.statusText}`);
+        if (res.ok) {
+          succeeded = validBodies.length;
+        } else {
+          const detail = await res.text();
+          errors.push(`Batch import error: ${res.status} ${detail || res.statusText}`);
+        }
+      } catch {
+        errors.push("Could not reach backend server for batch import.");
       }
-    } catch {
-      errors.push(`Row ${rowNumber}: could not reach the backend server.`);
+    } else {
+      // Row-by-row import fallback for endpoints without batch route
+      for (let i = 0; i < validBodies.length; i++) {
+        const rowNumber = i + 2;
+        try {
+          const res = await fetch(new URL(config.endpoint, BACKEND_URL), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(validBodies[i]),
+          });
+
+          if (res.ok) {
+            succeeded++;
+          } else {
+            const detail = await res.text();
+            errors.push(`Row ${rowNumber}: ${res.status} ${detail || res.statusText}`);
+          }
+        } catch {
+          errors.push(`Row ${rowNumber}: could not reach the backend server.`);
+        }
+      }
     }
   }
 
@@ -267,4 +310,3 @@ export async function uploadFileAction(
     errors: errors.slice(0, 20),
   };
 }
-
