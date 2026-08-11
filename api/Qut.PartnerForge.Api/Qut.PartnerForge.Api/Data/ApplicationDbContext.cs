@@ -184,8 +184,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.NewValues).HasColumnType("json");
 
-        // Analytics views — keyless, read-only, defined in schema.sql.
-        // Mapped with ToView so EF never attempts to create or write to them.
+        // Analytics views — keyless and read-only; ToView stops EF creating or writing them.
         modelBuilder.Entity<OrganisationStat>().HasNoKey().ToView("v_organisation_stats");
         modelBuilder.Entity<IntakeSummary>().HasNoKey().ToView("v_intake_summary");
         modelBuilder.Entity<MostActivePartner>().HasNoKey().ToView("v_most_active_partners_3yr");
@@ -201,10 +200,8 @@ public class ApplicationDbContext : DbContext
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            // View-mapped entities already own their name via ToView. They have DbSets too,
-            // so the lookup above would otherwise hand them a table mapping as well — one
-            // pointing at a table that does not exist, because the analytics views are
-            // views. Column naming below still applies to them.
+            // View-mapped entities own their name via ToView. Without this guard the DbSet
+            // lookup above would also map them to a table that does not exist.
             if (entityType.GetViewName() == null)
             {
                 var tableName = dbSetNames.TryGetValue(entityType.ClrType, out var setName)

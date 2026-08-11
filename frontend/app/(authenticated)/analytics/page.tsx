@@ -101,15 +101,13 @@ export default function AnalyticsPage() {
     setOrganisations(rows);
   }, [search, status, sortBy, sortDirection]);
 
-  // Nothing is fetched until the role is known to allow it; the denied panel
-  // renders without ever consulting `loading`, so it is left untouched here.
+  // Nothing is fetched until the role allows it; the denied panel never reads `loading`.
   useEffect(() => {
     if (!canView) return;
 
     let cancelled = false;
 
-    // Headline data is loaded from the API once auth state is known; the setState
-    // calls happen after the awaited fetch, not synchronously in the effect body.
+    // setState happens after the awaited fetch, not synchronously in the effect body.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHeadline()
       .catch(() => {

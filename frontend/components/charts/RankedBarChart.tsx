@@ -19,11 +19,7 @@ interface RankedBarChartProps {
   emptyMessage?: string;
 }
 
-/**
- * Single-series horizontal ranking. Built from HTML rather than SVG so the
- * organisation names stay selectable text that wraps with the layout, and
- * every bar carries its own value label — no legend needed for one series.
- */
+/** Single-series horizontal ranking. HTML, not SVG, so labels stay real text. */
 export default function RankedBarChart({
   data,
   color,

@@ -32,11 +32,7 @@ const MAX_BAR_WIDTH = 54;
 const SEGMENT_GAP = 2;
 const CORNER = 4;
 
-/**
- * Chooses an axis maximum and evenly spaced ticks that land on round numbers.
- * Picking the step first (rather than slicing an arbitrary max into quarters)
- * is what keeps labels reading 0/5/10/15 instead of 0/6/13/19.
- */
+/** Axis maximum and ticks that land on round numbers (step first, not max/4). */
 function niceScale(max: number): { axisMax: number; ticks: number[] } {
   const target = Math.max(Math.ceil(max), 1);
   const candidates = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
@@ -53,7 +49,7 @@ function niceScale(max: number): { axisMax: number; ticks: number[] } {
   };
 }
 
-/** Path for a bar segment with its far end rounded and its baseline end square. */
+/** Bar segment: rounded far end, square baseline end. */
 function segmentPath(x: number, y: number, w: number, h: number, rounded: boolean): string {
   if (!rounded || h <= CORNER) {
     return `M${x},${y} h${w} v${h} h${-w} Z`;

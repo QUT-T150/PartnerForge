@@ -5,22 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Qut.PartnerForge.Api.Services;
 
-/// <summary>
-/// Entity Framework implementation of <see cref="IAnalyticsService"/>.
-/// </summary>
-/// <remarks>
-/// Rollups are read from the SQL views rather than recomputed in LINQ so the aggregation
-/// logic lives in one place — <c>Schema/schema.sql</c>. Only the headline summary queries
-/// the base tables, because it counts rows the views do not expose.
-/// </remarks>
+/// <summary>EF implementation. Rollups come from the SQL views; only the summary touches base tables.</summary>
 public class AnalyticsService : IAnalyticsService
 {
     private readonly ApplicationDbContext _context;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="AnalyticsService"/>.
-    /// </summary>
-    /// <param name="context">Database context.</param>
+    /// <summary>Initializes a new instance of <see cref="AnalyticsService"/>.</summary>
     public AnalyticsService(ApplicationDbContext context)
     {
         _context = context;
@@ -70,9 +60,7 @@ public class AnalyticsService : IAnalyticsService
         if (!string.IsNullOrWhiteSpace(partnershipStatus))
             query = query.Where(o => o.PartnershipStatus == partnershipStatus);
 
-        // Materialised before projecting: the view's COUNT() columns arrive as BIGINT,
-        // and narrowing them inside the query would push a CAST into SQL for no gain
-        // on a result set the caller has already capped.
+        // COUNT() columns arrive as BIGINT; narrowing in-query would push a pointless CAST into SQL.
         var rows = await ApplySort(query, sortBy, descending)
             .Take(limit)
             .ToListAsync(cancellationToken);
@@ -108,8 +96,7 @@ public class AnalyticsService : IAnalyticsService
 
         var rows = await query.ToListAsync(cancellationToken);
 
-        // Sorted in memory: intake order is S1 < SS < S2, which the view cannot express
-        // without leaking its internal sort key into the projection.
+        // Sorted here, not in the view: intake order is S1 < SS < S2.
         return rows
             .OrderBy(i => i.Year)
             .ThenBy(i => SemesterOrder(i.Semester))
@@ -146,12 +133,7 @@ public class AnalyticsService : IAnalyticsService
             .ToList();
     }
 
-    /// <summary>
-    /// Applies a whitelisted sort key, falling back to project count for anything unrecognised.
-    /// </summary>
-    /// <param name="query">Source query over the organisation stats view.</param>
-    /// <param name="sortBy">Sort key already resolved by <see cref="AnalyticsSortKeys.Resolve"/>.</param>
-    /// <param name="descending">Sorts high-to-low when true.</param>
+    /// <summary>Applies a whitelisted sort key, defaulting to project count.</summary>
     private static IQueryable<OrganisationStat> ApplySort(
         IQueryable<OrganisationStat> query,
         string sortBy,
@@ -183,10 +165,7 @@ public class AnalyticsService : IAnalyticsService
             : query.OrderBy(o => o.TotalProjects).ThenBy(o => o.Name);
     }
 
-    /// <summary>
-    /// Maps a semester code to its position within an academic year.
-    /// </summary>
-    /// <param name="semester">Semester code (<c>S1</c>, <c>SS</c>, <c>S2</c>).</param>
+    /// <summary>Position of a semester within an academic year.</summary>
     private static int SemesterOrder(string semester) => semester switch
     {
         "S1" => 1,

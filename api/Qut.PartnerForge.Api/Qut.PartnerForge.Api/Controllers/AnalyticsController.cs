@@ -6,18 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Qut.PartnerForge.Api.Controllers;
 
 /// <summary>
-/// Read-only reporting endpoints over the analytics views.
+/// Read-only reporting endpoints. Admin and course_organiser only, matching the frontend
+/// permission matrix. Not faculty-scoped — the views aggregate across the whole dataset.
 /// </summary>
-/// <remarks>
-/// Restricted to <c>admin</c> and <c>course_organiser</c>, matching the <c>analytics</c> entry in
-/// the frontend permission matrix. Industry partners have no access: the rollups span every
-/// organisation, so there is no safe partner-scoped projection of them.
-/// <para>
-/// These figures are not faculty-scoped. The views aggregate across the whole dataset, and a
-/// course organiser seeing partial totals labelled as totals would be worse than seeing none.
-/// If per-faculty reporting is wanted, it belongs in the views rather than here.
-/// </para>
-/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "admin,course_organiser")]
@@ -29,35 +20,20 @@ public class AnalyticsController : ControllerBase
 
     private readonly IAnalyticsService _analytics;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="AnalyticsController"/>.
-    /// </summary>
-    /// <param name="analytics">Reporting query service.</param>
+    /// <summary>Initializes a new instance of <see cref="AnalyticsController"/>.</summary>
     public AnalyticsController(IAnalyticsService analytics)
     {
         _analytics = analytics;
     }
 
-    /// <summary>
-    /// Returns the headline counts rendered as stat tiles above the charts.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <summary>Headline counts for the stat tiles.</summary>
     [HttpGet("summary")]
     public async Task<ActionResult<AnalyticsSummaryDto>> GetSummary(CancellationToken cancellationToken)
     {
         return Ok(await _analytics.GetSummaryAsync(cancellationToken));
     }
 
-    /// <summary>
-    /// Lists per-organisation engagement rows from <c>v_organisation_stats</c>.
-    /// </summary>
-    /// <param name="search">Optional organisation name substring.</param>
-    /// <param name="industryId">Optional industry classification filter.</param>
-    /// <param name="status">Optional partnership status filter.</param>
-    /// <param name="sortBy">One of <c>name</c>, <c>totalProjects</c>, <c>lastProjectDate</c>, <c>eventsAttended</c>. Unrecognised values fall back to <c>totalProjects</c>.</param>
-    /// <param name="sortDirection">Either <c>asc</c> or <c>desc</c>; defaults to <c>desc</c>.</param>
-    /// <param name="limit">Row cap, clamped to 1–500.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <summary>Per-organisation engagement rows. Unrecognised sort keys fall back to <c>totalProjects</c>; <c>limit</c> clamps to 1–500.</summary>
     [HttpGet("organisations")]
     public async Task<ActionResult<IEnumerable<OrganisationStatDto>>> GetOrganisationStats(
         [FromQuery] string? search,
@@ -80,12 +56,7 @@ public class AnalyticsController : ControllerBase
         return Ok(rows);
     }
 
-    /// <summary>
-    /// Lists intake rollups from <c>v_intake_summary</c> in chronological order.
-    /// </summary>
-    /// <param name="fromYear">Optional inclusive lower bound on intake year.</param>
-    /// <param name="toYear">Optional inclusive upper bound on intake year.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <summary>Intake rollups in chronological order.</summary>
     [HttpGet("intakes")]
     public async Task<ActionResult<IEnumerable<IntakeSummaryDto>>> GetIntakes(
         [FromQuery] int? fromYear,
@@ -98,11 +69,7 @@ public class AnalyticsController : ControllerBase
         return Ok(await _analytics.GetIntakeSummaryAsync(fromYear, toYear, cancellationToken));
     }
 
-    /// <summary>
-    /// Lists the most active partners over the trailing three years.
-    /// </summary>
-    /// <param name="limit">Row cap, clamped to 1–500.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <summary>Most active partners over the trailing three years.</summary>
     [HttpGet("most-active-partners")]
     public async Task<ActionResult<IEnumerable<MostActivePartnerDto>>> GetMostActivePartners(
         [FromQuery] int? limit,
@@ -115,11 +82,7 @@ public class AnalyticsController : ControllerBase
         return Ok(rows);
     }
 
-    /// <summary>
-    /// Clamps a caller-supplied row cap into the accepted range.
-    /// </summary>
-    /// <param name="requested">Requested cap, null when the caller did not specify one.</param>
-    /// <param name="fallback">Value used when <paramref name="requested"/> is null.</param>
+    /// <summary>Clamps a caller-supplied row cap into the accepted range.</summary>
     private static int Clamp(int? requested, int fallback) =>
         requested is null ? fallback : Math.Clamp(requested.Value, 1, MaxLimit);
 }

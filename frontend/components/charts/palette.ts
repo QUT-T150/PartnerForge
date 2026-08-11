@@ -1,15 +1,7 @@
 /**
- * Categorical series colours for analytics charts.
- *
- * Blue and orange, validated as a pair against the white card surface:
- * both sit inside the L 0.43-0.77 lightness band, clear the 0.1 chroma floor,
- * exceed 3:1 contrast against #ffffff, and separate by dE 24.7 under protanopia
- * and 32.7 under tritanopia (target >= 8), so the split reads for colour-blind
- * viewers. Identity is never carried by colour alone: every chart here also
- * ships a legend, direct labels, and a data table toggle.
- *
- * Add a third series by taking the next validated slot (aqua #1baf7a) rather
- * than inventing a hue.
+ * Series colours, validated against the white card surface: >=3:1 contrast, and
+ * dE 24.7 (protanopia) / 32.7 (tritanopia) apart. Charts also carry legends and
+ * labels, so colour never carries meaning alone. Third series: aqua #1baf7a.
  */
 export const SERIES_COLORS = {
   primary: "#2a78d6",
