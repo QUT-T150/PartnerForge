@@ -26,6 +26,7 @@ export default function Header({ subtitle }: HeaderProps) {
   function navActive(target: string): string {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
     if (target === "/analytics") return isOnAnalytics ? "active" : "";
+    if (target === "/audit-log") return pathname === "/audit-log" ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
   }
@@ -79,6 +80,11 @@ export default function Header({ subtitle }: HeaderProps) {
           {user.role === "admin" && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management
+            </Link>
+          )}
+          {user.role === "admin" && (
+            <Link href="/audit-log" className={navActive("/audit-log")}>
+              Audit Log
             </Link>
           )}
         </nav>

@@ -185,18 +185,34 @@ public class ApplicationDbContext : DbContext
             .Property(a => a.NewValues).HasColumnType("json");
 
         // Analytics views — keyless, read-only, defined in schema.sql.
-        // Mapped with ToView so EF never attempts to create or write to them; the
-        // snake_case loop below supplies the column names, which already match.
+        // Mapped with ToView so EF never attempts to create or write to them.
         modelBuilder.Entity<OrganisationStat>().HasNoKey().ToView("v_organisation_stats");
         modelBuilder.Entity<IntakeSummary>().HasNoKey().ToView("v_intake_summary");
         modelBuilder.Entity<MostActivePartner>().HasNoKey().ToView("v_most_active_partners_3yr");
 
-        // Apply snake_case naming to all tables and columns to match schema.sql
+        // Apply snake_case naming to all tables and columns to match schema.sql.
+        // Table names are based on the DbSet property names directly: the relational convention
+        // that does this doesn't run under the InMemory provider (used in tests), which would
+        // otherwise fall back to singular class names and diverge from the MySQL mapping.
+        var dbSetNames = typeof(ApplicationDbContext).GetProperties()
+            .Where(p => p.PropertyType.IsGenericType &&
+                        p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .ToDictionary(p => p.PropertyType.GetGenericArguments()[0], p => p.Name);
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            var tableName = entityType.GetTableName();
-            if (tableName != null)
-                entityType.SetTableName(ToSnakeCase(tableName));
+            // View-mapped entities already own their name via ToView. They have DbSets too,
+            // so the lookup above would otherwise hand them a table mapping as well — one
+            // pointing at a table that does not exist, because the analytics views are
+            // views. Column naming below still applies to them.
+            if (entityType.GetViewName() == null)
+            {
+                var tableName = dbSetNames.TryGetValue(entityType.ClrType, out var setName)
+                    ? setName
+                    : entityType.GetTableName();
+                if (tableName != null)
+                    entityType.SetTableName(ToSnakeCase(tableName));
+            }
 
             foreach (var property in entityType.GetProperties())
                 property.SetColumnName(ToSnakeCase(property.Name));

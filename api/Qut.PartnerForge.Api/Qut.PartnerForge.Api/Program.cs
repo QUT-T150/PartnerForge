@@ -1,4 +1,5 @@
 using Qut.PartnerForge.Api.Data;
+using Qut.PartnerForge.Api.Interceptors;
 using Qut.PartnerForge.Api.Interfaces;
 using Qut.PartnerForge.Api.Models;
 using Qut.PartnerForge.Api.Services;
@@ -33,8 +34,10 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("Default");
 var mysqlVersion = builder.Configuration["Database:MySqlVersion"];
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(mysqlVersion!))));
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(mysqlVersion!)))
+           .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>()));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<IFilterFieldService, FilterFieldService>();
