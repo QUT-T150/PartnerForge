@@ -5,15 +5,12 @@ import Papa from "papaparse";
 import {
   TABLE_CONFIGS,
   buildRow,
+  validateCsvForTable,
   type UploadState,
-  type TableConfig,
 } from "./upload-core";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 const COOKIE_NAME = "auth-token";
-
-export type { UploadState, TableConfig };
-export { TABLE_CONFIGS };
 
 export async function uploadFileAction(
   _prevState: UploadState | null,
@@ -41,6 +38,15 @@ export async function uploadFileAction(
     return {
       status: "error",
       message: `Could not parse CSV: ${parsed.errors[0].message}`,
+    };
+  }
+
+  const headers = parsed.meta.fields || [];
+  const validation = validateCsvForTable(headers, table);
+  if (!validation.valid) {
+    return {
+      status: "error",
+      message: validation.message || "Invalid CSV format for target category.",
     };
   }
 

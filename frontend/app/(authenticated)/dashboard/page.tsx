@@ -32,7 +32,12 @@ import {
 } from "@/lib/permissions";
 import "./dashboard.css";
 
-import { uploadFileAction, type UploadState } from "@/helper/upload";
+import { uploadFileAction } from "@/helper/upload";
+import {
+  type UploadState,
+  validateCsvForTable,
+  generateReportCsv,
+} from "@/helper/upload-core";
 import { useActionState } from "react";
 
 interface UploadPreset {
@@ -319,30 +324,72 @@ function UploadFormSection({
   const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPreset =
     UPLOAD_TABLES.find((t) => t.value === selectedTable) || UPLOAD_TABLES[0];
 
+  const handleTableSelect = (tableValue: string) => {
+    if (tableValue === selectedTable) return;
+    setSelectedTable(tableValue);
+    setFile(null);
+    setPreviewRows([]);
+    setPreviewHeaders([]);
+    setShowPreview(false);
+    setValidationError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleFileSelect = (selectedFile: File | null) => {
+    setValidationError(null);
     if (!selectedFile) {
       setFile(null);
       setPreviewRows([]);
       setPreviewHeaders([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
-    setFile(selectedFile);
     Papa.parse<Record<string, string>>(selectedFile, {
       header: true,
       skipEmptyLines: true,
       preview: 5,
       complete: (results) => {
+        const headers = results.meta.fields || [];
+        const validation = validateCsvForTable(headers, selectedTable);
+
+        if (!validation.valid) {
+          setValidationError(validation.message || "Selected CSV file does not match target category.");
+          setFile(null);
+          setPreviewRows([]);
+          setPreviewHeaders([]);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+          return;
+        }
+
+        setValidationError(null);
+        setFile(selectedFile);
         if (results.meta.fields) {
           setPreviewHeaders(results.meta.fields);
         }
         if (results.data) {
           setPreviewRows(results.data);
+        }
+      },
+      error: (err) => {
+        setValidationError(`Could not parse CSV file: ${err.message}`);
+        setFile(null);
+        setPreviewRows([]);
+        setPreviewHeaders([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
       },
     });
@@ -370,6 +417,8 @@ function UploadFormSection({
           fileInputRef.current.files = dataTransfer.files;
         }
         handleFileSelect(droppedFile);
+      } else {
+        setValidationError("Please select a valid .csv file.");
       }
     }
   };
@@ -396,7 +445,7 @@ function UploadFormSection({
                 key={t.value}
                 type="button"
                 className={`preset-tab-card ${isSelected ? "active" : ""}`}
-                onClick={() => setSelectedTable(t.value)}
+                onClick={() => handleTableSelect(t.value)}
               >
                 <div className="preset-tab-header">
                   <div className="preset-tab-icon">
@@ -484,6 +533,18 @@ function UploadFormSection({
             </div>
           )}
         </div>
+
+        {validationError && (
+          <div className="upload-status-card status-error mt-4" style={{ marginTop: "1rem" }}>
+            <div className="status-card-header">
+              <AlertCircle size={20} className="text-rose-600 shrink-0" style={{ color: "#e11d48", minWidth: 20 }} />
+              <div className="status-header-text">
+                <span className="status-title-badge" style={{ color: "#9f1239", fontWeight: 600 }}>Target Category Mismatch</span>
+                <p className="status-msg" style={{ color: "#be123c", marginTop: 2 }}>{validationError}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CSV Live Preview */}
@@ -524,7 +585,17 @@ function UploadFormSection({
       )}
 
       {/* Submit Action */}
-      <div className="upload-action-row">
+      <div className="upload-action-row" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <label className="dry-run-checkbox-label" style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", color: "#334155", cursor: "pointer", userSelect: "none" }}>
+          <input
+            type="checkbox"
+            name="dryRun"
+            value="true"
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#2563eb" }}
+          />
+          <span><strong>Dry-Run Mode</strong> (Simulate & validate CSV rows without writing changes to the database)</span>
+        </label>
+
         <button
           type="submit"
           className="upload-submit-btn"
@@ -533,7 +604,7 @@ function UploadFormSection({
           {isPending ? (
             <>
               <Loader className="animate-spin" size={18} />
-              Importing records into {currentPreset.label}...
+              Processing records for {currentPreset.label}...
             </>
           ) : (
             <>
@@ -547,26 +618,61 @@ function UploadFormSection({
       {/* Status Feedback Results */}
       {state.status !== "idle" && (
         <div className={`upload-status-card status-${state.status}`}>
-          <div className="status-card-header">
-            {state.status === "success" && (
-              <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-            )}
-            {state.status === "partial" && (
-              <AlertCircle size={20} className="text-amber-600 shrink-0" />
-            )}
-            {state.status === "error" && (
-              <AlertCircle size={20} className="text-rose-600 shrink-0" />
-            )}
-            <div className="status-header-text">
-              <span className="status-title-badge">
-                {state.status === "success"
-                  ? "Import Completed Successfully"
-                  : state.status === "partial"
-                  ? "Partial Import Completed"
-                  : "Import Failed"}
-              </span>
-              <p className="status-msg">{state.message}</p>
+          <div className="status-card-header" style={{ justifyContent: "space-between", alignItems: "flex-start", display: "flex", width: "100%" }}>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+              {state.status === "success" && (
+                <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+              )}
+              {state.status === "partial" && (
+                <AlertCircle size={20} className="text-amber-600 shrink-0" />
+              )}
+              {state.status === "error" && (
+                <AlertCircle size={20} className="text-rose-600 shrink-0" />
+              )}
+              <div className="status-header-text">
+                <span className="status-title-badge">
+                  {state.status === "success"
+                    ? "Import Completed Successfully"
+                    : state.status === "partial"
+                    ? "Partial Import Completed"
+                    : "Import Failed"}
+                </span>
+                <p className="status-msg">{state.message}</p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              className="download-report-btn"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.4rem 0.75rem",
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                borderRadius: "0.375rem",
+                border: "1px solid #cbd5e1",
+                backgroundColor: "#ffffff",
+                color: "#1e293b",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                marginLeft: "1rem"
+              }}
+              onClick={() => {
+                const csvContent = generateReportCsv(state, currentPreset.label);
+                const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `import_report_${selectedTable}_${Date.now()}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <FileSpreadsheet size={16} />
+              Download Report (.csv)
+            </button>
           </div>
 
           {state.errors && state.errors.length > 0 && (

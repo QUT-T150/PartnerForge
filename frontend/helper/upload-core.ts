@@ -117,6 +117,104 @@ export interface UploadState {
   dryRun?: boolean;
 }
 
+export interface ValidationResult {
+  valid: boolean;
+  message?: string;
+}
+
+export function validateCsvForTable(
+  headers: string[],
+  tableKey: string,
+): ValidationResult {
+  const config = TABLE_CONFIGS[tableKey];
+  if (!config) {
+    return { valid: false, message: `Unknown target category "${tableKey}".` };
+  }
+
+  if (!headers || headers.length === 0) {
+    return { valid: false, message: "The CSV file contains no header columns." };
+  }
+
+  const normHeaders = headers.map((h) => normalizeKey(h));
+
+  const evaluateTable = (key: string) => {
+    const cfg = TABLE_CONFIGS[key];
+    if (!cfg) return { key, label: key, score: 0, missingRequired: [], matchedFieldsCount: 0 };
+
+    let matchedFieldsCount = 0;
+    const missingRequired: string[] = [];
+
+    for (const field of cfg.fields) {
+      const fieldNormKey = normalizeKey(field.key);
+      const isMatched = normHeaders.some((hNorm) => {
+        if (hNorm === fieldNormKey) return true;
+        if (field.aliases) {
+          return field.aliases.some((alias) => normalizeKey(alias) === hNorm);
+        }
+        return false;
+      });
+
+      if (isMatched) {
+        matchedFieldsCount++;
+      } else if (field.required) {
+        const displayHeader = field.aliases?.[0] || field.key;
+        missingRequired.push(displayHeader);
+      }
+    }
+
+    return { key, label: cfg.label, score: matchedFieldsCount, missingRequired, matchedFieldsCount };
+  };
+
+  const currentEval = evaluateTable(tableKey);
+
+  let bestOther: { key: string; label: string; score: number; missingRequired: string[] } | null = null;
+  for (const otherKey of Object.keys(TABLE_CONFIGS)) {
+    if (otherKey === tableKey) continue;
+    const otherEval = evaluateTable(otherKey);
+    if (!bestOther || otherEval.score > bestOther.score) {
+      bestOther = otherEval;
+    }
+  }
+
+  if (currentEval.missingRequired.length > 0) {
+    const missingList = currentEval.missingRequired.map((m) => `"${m}"`).join(", ");
+    let hint = "";
+    if (bestOther && bestOther.missingRequired.length === 0 && bestOther.score > 0) {
+      hint = ` (This file appears to be formatted for '${bestOther.label}'.)`;
+    }
+    return {
+      valid: false,
+      message: `Selected CSV does not match target category '${config.label}'. Missing required column(s): ${missingList}.${hint}`,
+    };
+  }
+
+  if (currentEval.matchedFieldsCount === 0) {
+    let hint = "";
+    if (bestOther && bestOther.score > 0) {
+      hint = ` (This file appears to be formatted for '${bestOther.label}'.)`;
+    }
+    return {
+      valid: false,
+      message: `Selected CSV does not contain valid headers for target category '${config.label}'.${hint}`,
+    };
+  }
+
+  if (
+    bestOther &&
+    bestOther.missingRequired.length === 0 &&
+    bestOther.score >= currentEval.score + 2 &&
+    bestOther.score > headers.length * 0.4
+  ) {
+    return {
+      valid: false,
+      message: `Selected CSV does not match target category '${config.label}'. It appears to be formatted for '${bestOther.label}'.`,
+    };
+  }
+
+  return { valid: true };
+}
+
+
 export function coerce(raw: string | undefined, type: FieldType, defaultValue?: unknown): unknown {
   const value = raw?.trim();
   if (!value) return defaultValue;
