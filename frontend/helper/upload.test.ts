@@ -3,6 +3,7 @@ import {
   normalizeKey,
   coerce,
   buildRow,
+  validateCsvForTable,
   TABLE_CONFIGS,
   generateSampleCsv,
   generateReportCsv,
@@ -233,6 +234,64 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(report).toContain("Import Report - Industry Partners");
       expect(report).toContain('"Dry Run","YES (Simulation Only)"');
       expect(report).toContain('"ERROR","Row 3: Missing required field ""Name"""');
+    });
+  });
+
+  describe("validateCsvForTable() Header & Target Validation", () => {
+    it("validates correct CSV headers for Industry Partners", () => {
+      const headers = [
+        "Project_id",
+        "Registration ID",
+        "Organisation Name",
+        "Address",
+        "ABN",
+        "Industy Partner Contact Name(s)",
+        "Position Title",
+        "Email",
+        "Phone",
+      ];
+      const result = validateCsvForTable(headers, "partners");
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects CSV missing required columns for Users", () => {
+      const headers = ["Project Title", "Project Description"];
+      const result = validateCsvForTable(headers, "users");
+      expect(result.valid).toBe(false);
+      expect(result.message).toContain("Missing required column(s)");
+      expect(result.message).toContain("Projects");
+    });
+
+    it("rejects Users CSV when selected target is Projects", () => {
+      const headers = ["Email", "Full Name", "Role", "Password"];
+      const result = validateCsvForTable(headers, "projects");
+      expect(result.valid).toBe(false);
+      expect(result.message).toContain("Missing required column(s): \"project title\"");
+      expect(result.message).toContain("Users");
+    });
+
+    it("rejects CSV with random headers that do not match target", () => {
+      const headers = ["UnrelatedCol1", "UnrelatedCol2"];
+      const result = validateCsvForTable(headers, "events");
+      expect(result.valid).toBe(false);
+      expect(result.message).toContain("does not contain valid headers for target category 'Events'");
+    });
+
+    it("detects when Industry Partner CSV is uploaded to Organisation target", () => {
+      const headers = [
+        "Project_id",
+        "Registration ID",
+        "Organisation Name",
+        "Address",
+        "ABN",
+        "Industy Partner Contact Name(s)",
+        "Position Title",
+        "Email",
+        "Phone",
+      ];
+      const result = validateCsvForTable(headers, "organisation");
+      expect(result.valid).toBe(false);
+      expect(result.message).toContain("Industry Partners");
     });
   });
 });
