@@ -148,9 +148,14 @@ w("-- Partner longevity and project volume are deliberately uneven so the questi
 w("-- recorded on #34 are answerable through the filters.")
 w("--")
 w("-- Apply to a running stack:")
-w("--   docker exec -i qpf-db mysql -uqut_partnerforge -p<pw> qut_partnerforge < Schema/seed_demo.sql")
+w("--   docker exec -i qpf-db mysql --default-character-set=utf8mb4 \\")
+w("--     -uqut_partnerforge -p<pw> qut_partnerforge < Schema/seed_demo.sql")
 w("-- =============================================================================")
 w("")
+# Without this the mysql client falls back to its own default charset (often
+# latin1) and any non-ASCII in the data is double-encoded on insert - em dashes
+# in project titles come back as "a???".
+w("SET NAMES utf8mb4;")
 w("SET FOREIGN_KEY_CHECKS = 0;")
 w("SET @admin := (SELECT id FROM users WHERE email = 'admin@system.com' LIMIT 1);")
 w("")

@@ -10,9 +10,11 @@
 -- recorded on #34 are answerable through the filters.
 --
 -- Apply to a running stack:
---   docker exec -i qpf-db mysql -uqut_partnerforge -p<pw> qut_partnerforge < Schema/seed_demo.sql
+--   docker exec -i qpf-db mysql --default-character-set=utf8mb4 \
+--     -uqut_partnerforge -p<pw> qut_partnerforge < Schema/seed_demo.sql
 -- =============================================================================
 
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 SET @admin := (SELECT id FROM users WHERE email = 'admin@system.com' LIMIT 1);
 
