@@ -3,6 +3,7 @@ using Qut.PartnerForge.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Qut.PartnerForge.Api.Controllers;
 
@@ -50,6 +51,11 @@ public class AuditLogController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25)
     {
+        var isAdmin = User.IsInRole("admin");
+if (!isAdmin && !recordId.HasValue)
+{
+    return Forbid();
+}
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
