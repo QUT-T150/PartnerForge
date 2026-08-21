@@ -32,9 +32,11 @@ CREATE TABLE roles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO roles (name, description) VALUES
-    ('admin',            'Full access. Approves submissions, manages users.'),
-    ('course_organiser', 'PS staff. Manages partners, projects, events.'),
-    ('industry_partner', 'External user. Registers org and submits project EOIs.');
+    ('admin',                 'Full access. Approves submissions, manages users.'),
+    ('course_organiser',      'PS staff. Manages partners, projects, events.'),
+    ('industry_partner',      'External user. Registers org and submits project EOIs.'),
+    ('industry_team',         'External user. Team member at a partner org — views partner data and submits project EOIs.'),
+    ('industry_team_manager', 'External user. Manages team members and submits project EOIs for a partner org.');
 
 CREATE TABLE permissions (
     id              INT AUTO_INCREMENT PRIMARY KEY,
