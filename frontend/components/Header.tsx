@@ -80,6 +80,9 @@ export default function Header({ subtitle }: HeaderProps) {
               Audit Log
             </Link>
           )}
+          <Link href="/docs" target="_blank" rel="noopener noreferrer">
+            Docs
+          </Link>
         </nav>
         <div className="user-block">
           <div className="user-name">{user.fullName}</div>
