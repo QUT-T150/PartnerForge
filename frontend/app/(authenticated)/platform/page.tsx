@@ -203,6 +203,14 @@ function PlatformContent() {
   const [industries, setIndustries] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Search results are paginated, so the rows in state are one page rather than
+  // the whole set. The search response carries the real count -- keep it so the
+  // summary tiles report the total (or the filtered total) instead of the page
+  // size. Null means no search has run and the row arrays are already complete.
+  const [partnersTotal, setPartnersTotal] = useState<number | null>(null);
+  const [projectsTotal, setProjectsTotal] = useState<number | null>(null);
+  const [eventsTotal, setEventsTotal] = useState<number | null>(null);
+
   // Filters
   const [applicationsSearch, setApplicationsSearch] = useState("");
   const [applicationsStatus, setApplicationsStatus] = useState("pending");
@@ -239,6 +247,9 @@ function PlatformContent() {
       setEvents(results[3] || []);
       setIndustries(results[4] || []);
       setUsers(results[5] || []);
+      setPartnersTotal(null);
+      setProjectsTotal(null);
+      setEventsTotal(null);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load data");
@@ -251,16 +262,19 @@ function PlatformContent() {
     loadData();
   }, [loadData]);
 
-  const handlePartnerResults = useCallback((data: { items: any[] }) => {
+  const handlePartnerResults = useCallback((data: { items: any[]; total: number }) => {
     setPartners(data.items);
+    setPartnersTotal(data.total);
   }, []);
 
-  const handleProjectResults = useCallback((data: { items: any[] }) => {
+  const handleProjectResults = useCallback((data: { items: any[]; total: number }) => {
     setProjects(data.items);
+    setProjectsTotal(data.total);
   }, []);
 
-  const handleEventResults = useCallback((data: { items: any[] }) => {
+  const handleEventResults = useCallback((data: { items: any[]; total: number }) => {
     setEvents(data.items);
+    setEventsTotal(data.total);
   }, []);
 
   // Filtered rows
@@ -431,13 +445,13 @@ function PlatformContent() {
           {isVisible("partners") && (
             <div className="summary-card">
               <div className="summary-label">Partners</div>
-              <div className="summary-value">{partners.length}</div>
+              <div className="summary-value">{partnersTotal ?? partners.length}</div>
             </div>
           )}
           {isVisible("projects") && (
             <div className="summary-card">
               <div className="summary-label">Projects</div>
-              <div className="summary-value">{projects.length}</div>
+              <div className="summary-value">{projectsTotal ?? projects.length}</div>
             </div>
           )}
           {isVisible("applications") && (
@@ -451,7 +465,7 @@ function PlatformContent() {
           {isVisible("events") && (
             <div className="summary-card">
               <div className="summary-label">Events</div>
-              <div className="summary-value">{events.length}</div>
+              <div className="summary-value">{eventsTotal ?? events.length}</div>
             </div>
           )}
           {isVisible("users") && role === "admin" && (

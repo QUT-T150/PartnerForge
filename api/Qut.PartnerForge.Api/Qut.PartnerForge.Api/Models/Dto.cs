@@ -250,3 +250,27 @@ public record SaveUserRequest(
     Guid? OrganisationId,
     bool IsActive
 );
+
+/// <summary>Single audit event with the acting user resolved for display.</summary>
+public record AuditLogEntryDto(
+    long Id,
+    string TableName,
+    Guid RecordId,
+    string Action,
+    Guid? ChangedBy,
+    string? ChangedByName,
+    string? ChangedByEmail,
+    DateTime ChangedAt,
+    string? OldValues,
+    string? NewValues,
+    string? IpAddress,
+    string? UserAgent
+);
+
+/// <summary>Paged slice of the audit log plus the total row count for the active filters.</summary>
+public record AuditLogPageDto(
+    IReadOnlyList<AuditLogEntryDto> Items,
+    int TotalCount,
+    int Page,
+    int PageSize
+);

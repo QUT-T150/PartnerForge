@@ -3,9 +3,9 @@ export type EntityType = "partner" | "project" | "application" | "event" | "user
 export type PermLevel = "rw" | "r" | "no";
 
 export const PERMISSIONS: Record<Role, Record<string, PermLevel>> = {
-  admin: { partners: "rw", projects: "rw", events: "rw", applications: "rw", analytics: "r", users: "rw" , upload: "rw"},
-  course_organiser: { partners: "rw", projects: "rw", events: "rw", applications: "r", analytics: "r", users: "no" , upload: "no"},
-  industry_partner: { partners: "r", projects: "r", events: "r", applications: "rw", analytics: "no", users: "no" , upload: "no"},
+  admin: { partners: "rw", projects: "rw", events: "rw", applications: "rw", analytics: "r", users: "rw", upload: "rw", audit: "r" },
+  course_organiser: { partners: "rw", projects: "rw", events: "rw", applications: "r", analytics: "r", users: "no", upload: "no", audit: "no" },
+  industry_partner: { partners: "r", projects: "r", events: "r", applications: "rw", analytics: "no", users: "no", upload: "no", audit: "no" },
 };
 
 export const PERM_LABEL: Record<PermLevel, { text: string; cls: string }> = {
