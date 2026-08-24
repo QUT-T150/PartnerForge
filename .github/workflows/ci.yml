@@ -40,7 +40,7 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile || pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: TypeScript Type Check
         run: pnpm run type-check
