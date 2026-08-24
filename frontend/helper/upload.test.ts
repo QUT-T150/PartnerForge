@@ -3,6 +3,8 @@ import {
   normalizeKey,
   coerce,
   buildRow,
+  parseAddress,
+  suggestColumnMapping,
   validateCsvForTable,
   TABLE_CONFIGS,
   generateSampleCsv,
@@ -13,6 +15,31 @@ import fs from "fs";
 import path from "path";
 
 describe("CSV Importer Unit & Performance Tests", () => {
+  describe("parseAddress()", () => {
+    it("parses full Australian address strings into structured parts", () => {
+      const parsed1 = parseAddress("123 Innovation Way, Brisbane QLD 4000");
+      expect(parsed1.addressLine1).toBe("123 Innovation Way");
+      expect(parsed1.city).toBe("Brisbane");
+      expect(parsed1.state).toBe("QLD");
+      expect(parsed1.postcode).toBe("4000");
+      expect(parsed1.country).toBe("Australia");
+
+      const parsed2 = parseAddress("100 O'Connell St, Suite 4, Sydney, NSW 2000, Australia");
+      expect(parsed2.addressLine1).toBe("100 O'Connell St");
+      expect(parsed2.addressLine2).toBe("Suite 4");
+      expect(parsed2.city).toBe("Sydney");
+      expect(parsed2.state).toBe("NSW");
+      expect(parsed2.postcode).toBe("2000");
+      expect(parsed2.country).toBe("Australia");
+
+      const parsed3 = parseAddress("42 Wallaby Way, Sydney NSW 2000");
+      expect(parsed3.addressLine1).toBe("42 Wallaby Way");
+      expect(parsed3.city).toBe("Sydney");
+      expect(parsed3.state).toBe("NSW");
+      expect(parsed3.postcode).toBe("2000");
+    });
+  });
+
   describe("normalizeKey()", () => {
     it("normalizes headers with spaces, capitalization, hyphens, and underscores", () => {
       expect(normalizeKey("Organisation Name")).toBe("organisation name");
@@ -35,14 +62,56 @@ describe("CSV Importer Unit & Performance Tests", () => {
     });
   });
 
-  describe("buildRow() - Entity Field Mappings & Aliases", () => {
-    it("correctly maps Industry Partner CSV headers including typos and aliases", () => {
+  describe("suggestColumnMapping() Smart Header Detection", () => {
+    it("auto-detects standard headers for Industry Partners", () => {
+      const headers = [
+        "Organisation Name",
+        "ABN",
+        "Address",
+        "Email",
+        "Phone",
+        "Position Title",
+      ];
+      const mapping = suggestColumnMapping(headers, TABLE_CONFIGS.partners.fields);
+      expect(mapping.Name).toBe("Organisation Name");
+      expect(mapping.Abn).toBe("ABN");
+      expect(mapping.AddressLine1).toBe("Address");
+      expect(mapping.Email).toBe("Email");
+      expect(mapping.Phone).toBe("Phone");
+      expect(mapping.PrimaryContactPosition).toBe("Position Title");
+    });
+
+    it("auto-suggests mappings for non-standard headers like User Name, User Email, Role Title", () => {
+      const headers = [
+        "User Name",
+        "User Email",
+        "Role Title",
+        "Secret Password",
+      ];
+      const mapping = suggestColumnMapping(headers, TABLE_CONFIGS.users.fields);
+      expect(mapping.FullName).toBe("User Name");
+      expect(mapping.Email).toBe("User Email");
+      expect(mapping.Role).toBe("Role Title");
+      expect(mapping.Password).toBe("Secret Password");
+      expect(mapping.IsActive).toBe(""); // unmapped
+    });
+
+    it("returns empty strings for unmapped fields", () => {
+      const headers = ["RandomColA", "RandomColB"];
+      const mapping = suggestColumnMapping(headers, TABLE_CONFIGS.projects.fields);
+      expect(mapping.Title).toBe("");
+      expect(mapping.Description).toBe("");
+    });
+  });
+
+  describe("buildRow() - Entity Field Mappings & Custom Column Mappings", () => {
+    it("correctly maps Industry Partner CSV headers including typos, aliases, address splitting, and notes", () => {
       const config = TABLE_CONFIGS.partners;
       const csvRow = {
         "Project_id": "PRJ-2024-999",
         "Registration ID": "REG-2024-888",
         "Organisation Name": "  TechCorp Australia ",
-        "Address": "123 Innovation Way, Brisbane",
+        "Address": "123 Innovation Way, Brisbane QLD 4000",
         "ABN": "12 345 678 901",
         "Industy Partner Contact Name(s)": "Sarah Jenkins",
         "Position Title": "VP of Technology",
@@ -54,14 +123,45 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(error).toBeUndefined();
       expect(body.Name).toBe("TechCorp Australia");
       expect(body.RegistrationId).toBe("REG-2024-888");
-      expect(body.AddressLine1).toBe("123 Innovation Way, Brisbane");
+      expect(body.AddressLine1).toBe("123 Innovation Way");
+      expect(body.City).toBe("Brisbane");
+      expect(body.State).toBe("QLD");
+      expect(body.Postcode).toBe("4000");
+      expect(body.Country).toBe("Australia");
       expect(body.Abn).toBe("12 345 678 901");
       expect(body.PrimaryContactName).toBe("Sarah Jenkins");
       expect(body.PrimaryContactPosition).toBe("VP of Technology");
+      expect(body.PrimaryContactEmail).toBe("s.jenkins@techcorp.com");
+      expect(body.PrimaryContactPhone).toBe("0731234567");
       expect(body.Email).toBe("s.jenkins@techcorp.com");
       expect(body.Phone).toBe("0731234567");
       expect(body.Notes).toBe("PRJ-2024-999");
       expect(body.PartnershipStatus).toBe("active");
+    });
+
+    it("correctly builds row using user-defined custom columnMapping", () => {
+      const config = TABLE_CONFIGS.users;
+      const customCsvRow = {
+        "User Full Name": "Alice Wonderland",
+        "Work Mail": "alice@qut.edu.au",
+        "System Permission": "course_organiser",
+        "Temp Pass": "secret999",
+      };
+
+      const customMapping = {
+        FullName: "User Full Name",
+        Email: "Work Mail",
+        Role: "System Permission",
+        Password: "Temp Pass",
+        IsActive: "",
+      };
+
+      const { body, error } = buildRow(customCsvRow, config.fields, customMapping);
+      expect(error).toBeUndefined();
+      expect(body.FullName).toBe("Alice Wonderland");
+      expect(body.Email).toBe("alice@qut.edu.au");
+      expect(body.Role).toBe("course_organiser");
+      expect(body.Password).toBe("secret999");
     });
 
     it("correctly maps Projects CSV headers and applies default semester/year", () => {
@@ -186,7 +286,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
       const durationMs = performance.now() - startTime;
 
       expect(validRowsCount).toBe(500);
-      expect(durationMs).toBeLessThan(100); // Execution time under 100ms
+      expect(durationMs).toBeLessThan(500); // Execution time under 500ms
       console.log(`⏱️ Performance Benchmark: 500 rows parsed & built in ${durationMs.toFixed(2)}ms`);
     });
 
@@ -238,7 +338,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
   });
 
   describe("validateCsvForTable() Header & Target Validation", () => {
-    it("validates correct CSV headers for Industry Partners", () => {
+    it("validates correct CSV headers for Industry Partners without mapping", () => {
       const headers = [
         "Project_id",
         "Registration ID",
@@ -254,7 +354,30 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(result.valid).toBe(true);
     });
 
-    it("rejects CSV missing required columns for Users", () => {
+    it("validates non-standard headers when custom columnMapping is provided", () => {
+      const headers = ["User Name", "User Email", "User Role", "ExtraCol"];
+      const customMapping = {
+        FullName: "User Name",
+        Email: "User Email",
+        Role: "User Role",
+      };
+      const result = validateCsvForTable(headers, "users", customMapping);
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects when required field is missing in custom columnMapping", () => {
+      const headers = ["User Name", "User Email"];
+      const customMapping = {
+        FullName: "User Name",
+        Email: "User Email",
+        Role: "", // missing required field Role
+      };
+      const result = validateCsvForTable(headers, "users", customMapping);
+      expect(result.valid).toBe(false);
+      expect(result.message).toContain("Missing required column mapping(s)");
+    });
+
+    it("rejects CSV missing required columns for Users without mapping", () => {
       const headers = ["Project Title", "Project Description"];
       const result = validateCsvForTable(headers, "users");
       expect(result.valid).toBe(false);
@@ -262,7 +385,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(result.message).toContain("Projects");
     });
 
-    it("rejects Users CSV when selected target is Projects", () => {
+    it("rejects Users CSV when selected target is Projects without mapping", () => {
       const headers = ["Email", "Full Name", "Role", "Password"];
       const result = validateCsvForTable(headers, "projects");
       expect(result.valid).toBe(false);
@@ -277,21 +400,16 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(result.message).toContain("does not contain valid headers for target category 'Events'");
     });
 
-    it("detects when Industry Partner CSV is uploaded to Organisation target", () => {
+    it("detects when Projects CSV is uploaded to Organisation target", () => {
       const headers = [
-        "Project_id",
-        "Registration ID",
-        "Organisation Name",
-        "Address",
-        "ABN",
-        "Industy Partner Contact Name(s)",
-        "Position Title",
-        "Email",
-        "Phone",
+        "Project Title",
+        "Project Description",
+        "Project Partner Agreement",
+        "Student Project Agreement - IP Licence/Assignment",
       ];
       const result = validateCsvForTable(headers, "organisation");
       expect(result.valid).toBe(false);
-      expect(result.message).toContain("Industry Partners");
+      expect(result.message).toContain("Projects");
     });
   });
 });

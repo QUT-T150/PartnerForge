@@ -105,6 +105,7 @@ public class OrganisationsController : ControllerBase
                     .Where(c => c.DeletedAt == null && c.IsPrimary)
                     .Select(c => c.Phone)
                     .FirstOrDefault(),
+                o.Notes,
                 o.Projects.Count(p => p.DeletedAt == null),
                 o.ProjectApplications.Count(a =>
                     a.DeletedAt == null &&
@@ -161,6 +162,7 @@ public class OrganisationsController : ControllerBase
                     .Where(c => c.DeletedAt == null && c.IsPrimary)
                     .Select(c => c.Phone)
                     .FirstOrDefault(),
+                o.Notes,
                 o.Projects.Count(p => p.DeletedAt == null),
                 o.ProjectApplications.Count(a =>
                     a.DeletedAt == null &&

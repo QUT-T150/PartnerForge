@@ -17,21 +17,124 @@ export interface TableConfig {
   fields: FieldSpec[];
 }
 
+export interface ParsedAddress {
+  addressLine1: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}
+
+export function parseAddress(raw: string): ParsedAddress {
+  const trimmed = raw.trim();
+  if (!trimmed) return { addressLine1: "" };
+
+  let working = trimmed;
+  let country: string | undefined = undefined;
+
+  // Extract country at the end (e.g. ", Australia", ", New Zealand", ", USA")
+  const countryMatch = working.match(/,\s*(Australia|New Zealand|USA|United States|UK|United Kingdom)$/i);
+  if (countryMatch) {
+    country = countryMatch[1];
+    working = working.slice(0, countryMatch.index).trim();
+  }
+
+  let postcode: string | undefined = undefined;
+  let state: string | undefined = undefined;
+  let city: string | undefined = undefined;
+
+  // Match Australian City/Suburb + State + Postcode (e.g. "Brisbane QLD 4000", "Sydney, NSW 2000", "Milton QLD 4064")
+  const statePostcodeMatch = working.match(/(?:,\s*|\s+)([A-Za-z\s]+?)[,\s]+(NSW|QLD|VIC|WA|SA|TAS|ACT|NT)\s+(\d{4})\s*$/i);
+  if (statePostcodeMatch) {
+    city = statePostcodeMatch[1].trim();
+    state = statePostcodeMatch[2].toUpperCase();
+    postcode = statePostcodeMatch[3];
+    working = working.slice(0, statePostcodeMatch.index).trim();
+  } else {
+    // Match State + Postcode without preceding city (e.g. "NSW 2000" or "QLD 4000")
+    const justStatePostcode = working.match(/(?:,\s*|\s+)(NSW|QLD|VIC|WA|SA|TAS|ACT|NT)\s+(\d{4})\s*$/i);
+    if (justStatePostcode) {
+      state = justStatePostcode[1].toUpperCase();
+      postcode = justStatePostcode[2];
+      working = working.slice(0, justStatePostcode.index).trim();
+    } else {
+      // 4-digit postcode at end
+      const justPostcode = working.match(/(?:,\s*|\s+)(\d{4})\s*$/);
+      if (justPostcode) {
+        postcode = justPostcode[1];
+        working = working.slice(0, justPostcode.index).trim();
+      }
+      // State at end
+      const justState = working.match(/(?:,\s*|\s+)(NSW|QLD|VIC|WA|SA|TAS|ACT|NT)\s*$/i);
+      if (justState) {
+        state = justState[1].toUpperCase();
+        working = working.slice(0, justState.index).trim();
+      }
+    }
+
+    // If city is still not found and there are commas, check if trailing segment is the suburb
+    if (!city && working.includes(",")) {
+      const parts = working.split(",").map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const lastPart = parts[parts.length - 1];
+        if (!/^\d/.test(lastPart) && !/^(suite|level|unit|building|floor)\b/i.test(lastPart)) {
+          city = lastPart;
+          parts.pop();
+          working = parts.join(", ");
+        }
+      }
+    }
+  }
+
+  let addressLine1 = working;
+  let addressLine2: string | undefined = undefined;
+
+  const remainingParts = working.split(",").map((p) => p.trim()).filter(Boolean);
+  if (remainingParts.length >= 2) {
+    if (
+      /^(suite|unit|level|floor|apt|apartment|building|bld|room)\b/i.test(remainingParts[1]) ||
+      /^(suite|unit|level|floor|apt|apartment|building|bld|room)\b/i.test(remainingParts[0])
+    ) {
+      addressLine1 = remainingParts[0];
+      addressLine2 = remainingParts.slice(1).join(", ");
+    }
+  }
+
+  return {
+    addressLine1: addressLine1 || trimmed,
+    addressLine2,
+    city,
+    state,
+    postcode,
+    country: country || (state ? "Australia" : undefined),
+  };
+}
+
 export const TABLE_CONFIGS: Record<string, TableConfig> = {
   partners: {
     label: "Industry Partners",
     endpoint: "/api/Organisations",
     batchEndpoint: "/api/Organisations/batch",
     fields: [
-      { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name"] },
+      { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name", "partner"] },
       { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id"] },
       { key: "Abn", type: "string", aliases: ["abn", "australian business number"] },
-      { key: "AddressLine1", type: "string", aliases: ["address", "address line 1", "street address", "location"] },
-      { key: "PrimaryContactName", type: "string", aliases: ["industy partner contact name(s)", "industry partner contact name(s)", "contact name", "primary contact name", "contact"] },
-      { key: "PrimaryContactPosition", type: "string", aliases: ["position title", "contact position", "title", "job title"] },
-      { key: "Email", type: "string", aliases: ["email", "primary contact email", "contact email"] },
-      { key: "Phone", type: "string", aliases: ["phone", "primary contact phone", "contact phone", "mobile", "telephone"] },
-      { key: "Notes", type: "string", aliases: ["project_id", "project id", "notes", "comments"] },
+      { key: "AddressLine1", type: "string", aliases: ["address", "address line 1", "street address", "location", "office address"] },
+      { key: "AddressLine2", type: "string", aliases: ["address line 2", "unit", "suite", "level", "building"] },
+      { key: "City", type: "string", aliases: ["city", "suburb", "town", "locality"] },
+      { key: "State", type: "string", aliases: ["state", "province", "region"] },
+      { key: "Postcode", type: "string", aliases: ["postcode", "postal code", "zip", "zip code"] },
+      { key: "Country", type: "string", aliases: ["country", "nation"], defaultValue: "Australia" },
+      { key: "Website", type: "string", aliases: ["website", "url", "web", "company website"] },
+      { key: "PrimaryContactName", type: "string", aliases: ["industy partner contact name(s)", "industry partner contact name(s)", "contact name", "primary contact name", "contact", "industry supervisor's name", "supervisor name"] },
+      { key: "PrimaryContactPosition", type: "string", aliases: ["position title", "contact position", "title", "job title", "industry supervisor's position title", "supervisor position title"] },
+      { key: "PrimaryContactEmail", type: "string", aliases: ["primary contact email", "contact email", "supervisor email"] },
+      { key: "PrimaryContactPhone", type: "string", aliases: ["primary contact phone", "contact phone", "supervisor phone", "contact mobile"] },
+      { key: "Email", type: "string", aliases: ["business email", "email", "office email", "company email", "organisation email"] },
+      { key: "Phone", type: "string", aliases: ["business phone", "phone", "office phone", "company phone", "telephone"] },
+      { key: "OrganisationInformation", type: "string", aliases: ["organisation information", "organization information", "company info", "about", "description"] },
+      { key: "Notes", type: "string", aliases: ["project_id", "project id", "notes", "comments", "remarks"] },
       { key: "PartnershipStatus", type: "string", required: false, defaultValue: "active" },
     ],
   },
@@ -42,12 +145,20 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     fields: [
       { key: "Title", type: "string", required: true, aliases: ["project title", "title", "name"] },
       { key: "Description", type: "string", aliases: ["project description", "description", "summary", "overview"] },
+      { key: "OrganisationName", type: "string", aliases: ["organisation", "organization", "company", "partner", "organisation name"] },
+      { key: "FacultyId", type: "int", aliases: ["faculty id", "faculty"] },
       { key: "ProjectPartnerAgreement", type: "string", aliases: ["project partner agreement", "partner agreement", "ppa"] },
       { key: "StudentProjectAgreement", type: "string", aliases: ["student project agreement - ip licence/assignment", "student project agreement", "spa", "ip assignment"] },
-      { key: "ProjectType", type: "string", required: false, defaultValue: "Capstone" },
-      { key: "Semester", type: "string", required: false, defaultValue: "Semester 1" },
-      { key: "Year", type: "int", required: false, defaultValue: 2026 },
-      { key: "Status", type: "string", required: false, defaultValue: "ongoing" },
+      { key: "IpAssignmentRationale", type: "string", aliases: ["ip assignment rationale", "assignment of ip - rationale", "ip rationale"] },
+      { key: "DisciplineArea", type: "string", aliases: ["discipline area", "discipline", "primary discipline"] },
+      { key: "SecondaryItDiscipline", type: "string", aliases: ["secondary it discipline", "secondary discipline"] },
+      { key: "ProjectDeliverables", type: "string", aliases: ["project deliverables", "deliverables"] },
+      { key: "ProjectType", type: "string", required: false, defaultValue: "Capstone", aliases: ["project type", "type"] },
+      { key: "Semester", type: "string", required: false, defaultValue: "Semester 1", aliases: ["semester", "term"] },
+      { key: "Year", type: "int", required: false, defaultValue: 2026, aliases: ["year"] },
+      { key: "Status", type: "string", required: false, defaultValue: "ongoing", aliases: ["status", "project status"] },
+      { key: "MultipleTeams", type: "bool", aliases: ["multiple teams", "multi team"] },
+      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks"] },
     ],
   },
   organisation: {
@@ -55,14 +166,24 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     endpoint: "/api/Organisations",
     batchEndpoint: "/api/Organisations/batch",
     fields: [
-      { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name"] },
-      { key: "AddressLine1", type: "string", aliases: ["address", "street address", "location", "office address"] },
+      { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name", "partner"] },
+      { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id"] },
       { key: "Abn", type: "string", aliases: ["abn", "australian business number"] },
-      { key: "PrimaryContactName", type: "string", aliases: ["industry supervisor's name", "industry supervisor name", "supervisor name", "contact name"] },
+      { key: "AddressLine1", type: "string", aliases: ["address", "address line 1", "street address", "location", "office address"] },
+      { key: "AddressLine2", type: "string", aliases: ["address line 2", "unit", "suite", "level", "building"] },
+      { key: "City", type: "string", aliases: ["city", "suburb", "town", "locality"] },
+      { key: "State", type: "string", aliases: ["state", "province", "region"] },
+      { key: "Postcode", type: "string", aliases: ["postcode", "postal code", "zip", "zip code"] },
+      { key: "Country", type: "string", aliases: ["country", "nation"], defaultValue: "Australia" },
+      { key: "Website", type: "string", aliases: ["website", "url", "web", "company website"] },
+      { key: "PrimaryContactName", type: "string", aliases: ["industry supervisor's name", "industry supervisor name", "supervisor name", "contact name", "primary contact name", "contact"] },
       { key: "PrimaryContactPosition", type: "string", aliases: ["industry supervisor's position title", "supervisor position title", "position title", "job title"] },
-      { key: "Phone", type: "string", aliases: ["business phone", "phone", "office phone", "telephone"] },
-      { key: "Email", type: "string", aliases: ["business email", "email", "office email", "contact email"] },
-      { key: "OrganisationInformation", type: "string", aliases: ["organisation information", "organization information", "company info", "about"] },
+      { key: "PrimaryContactEmail", type: "string", aliases: ["primary contact email", "contact email", "supervisor email"] },
+      { key: "PrimaryContactPhone", type: "string", aliases: ["primary contact phone", "contact phone", "supervisor phone", "contact mobile"] },
+      { key: "Phone", type: "string", aliases: ["business phone", "phone", "office phone", "company phone", "telephone"] },
+      { key: "Email", type: "string", aliases: ["business email", "email", "office email", "company email", "organisation email"] },
+      { key: "OrganisationInformation", type: "string", aliases: ["organisation information", "organization information", "company info", "about", "description"] },
+      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks", "project_id", "project id"] },
       { key: "PartnershipStatus", type: "string", required: false, defaultValue: "prospect" },
     ],
   },
@@ -70,6 +191,12 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     label: "Events",
     endpoint: "/api/Events/attendances",
     fields: [
+      { key: "Name", type: "string", aliases: ["event name", "name", "title", "events invited to"] },
+      { key: "Description", type: "string", aliases: ["event description", "description"] },
+      { key: "EventType", type: "string", aliases: ["event type", "type"] },
+      { key: "EventDate", type: "string", aliases: ["event date", "date"] },
+      { key: "Location", type: "string", aliases: ["location", "venue", "address"] },
+      { key: "FacultyId", type: "int", aliases: ["faculty id"] },
       { key: "OrganisationName", type: "string", aliases: ["organisation", "organization", "company", "org name"] },
       { key: "FirstName", type: "string", aliases: ["first name", "given name", "first_name"] },
       { key: "BestContactName", type: "string", aliases: ["best contact person to liaise with on this event", "best contact person", "liaison contact", "contact person"] },
@@ -79,6 +206,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { key: "Source", type: "string", aliases: ["source", "lead source", "referral"] },
       { key: "EventsInvitedTo", type: "string", aliases: ["events invited to", "invited events", "event name", "event"] },
       { key: "Response", type: "string", aliases: ["response", "rsvp status", "status", "attendance response"] },
+      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks"] },
     ],
   },
   applications: {
@@ -90,8 +218,13 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { key: "ProposedProjectType", type: "string", aliases: ["proposed project type", "project type"] },
       { key: "ProposedSemester", type: "string", aliases: ["proposed semester", "semester"] },
       { key: "ProposedYear", type: "int", aliases: ["proposed year", "year"] },
-      { key: "StudentProjectAgreement", type: "string", aliases: ["student project agreement", "spa"] },
-      { key: "IpAssignmentRationale", type: "string", aliases: ["ip assignment rationale", "ip rationale"] },
+      { key: "ProposedFacultyId", type: "int", aliases: ["proposed faculty id", "faculty id", "proposed faculty"] },
+      { key: "ProposedMultipleTeams", type: "bool", aliases: ["proposed multiple teams", "multiple teams"] },
+      { key: "ProposedDisciplineArea", type: "string", aliases: ["proposed discipline area", "discipline area"] },
+      { key: "ProposedSecondaryItDiscipline", type: "string", aliases: ["proposed secondary it discipline", "secondary it discipline"] },
+      { key: "ProposedDeliverables", type: "string", aliases: ["proposed deliverables", "deliverables"] },
+      { key: "StudentProjectAgreement", type: "string", aliases: ["student project agreement", "spa", "student project agreement - ip licence/assignment"] },
+      { key: "IpAssignmentRationale", type: "string", aliases: ["ip assignment rationale", "ip rationale", "assignment of ip - rationale"] },
     ],
   },
   users: {
@@ -102,7 +235,9 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { key: "Password", type: "string", aliases: ["password"] },
       { key: "FullName", type: "string", required: true, aliases: ["full name", "name", "display name"] },
       { key: "Role", type: "string", required: true, aliases: ["role", "user role"] },
-      { key: "IsActive", type: "bool", aliases: ["is active", "active"] },
+      { key: "FacultyId", type: "int", aliases: ["faculty id", "faculty"] },
+      { key: "OrganisationId", type: "guid", aliases: ["organisation id", "organization id"] },
+      { key: "IsActive", type: "bool", aliases: ["is active", "active"], defaultValue: true },
     ],
   },
 };
@@ -122,9 +257,71 @@ export interface ValidationResult {
   message?: string;
 }
 
+export function suggestColumnMapping(
+  headers: string[],
+  fields: FieldSpec[],
+): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const normHeaders = headers.map((h) => ({ original: h, norm: normalizeKey(h) }));
+
+  for (const field of fields) {
+    const fieldNorm = normalizeKey(field.key);
+    const aliasesNorm = (field.aliases || []).map((a) => normalizeKey(a));
+
+    // 1. Direct exact key match
+    let match = normHeaders.find((h) => h.original.toLowerCase() === field.key.toLowerCase());
+    if (match) {
+      mapping[field.key] = match.original;
+      continue;
+    }
+
+    // 2. Direct normalized key match
+    match = normHeaders.find((h) => h.norm === fieldNorm);
+    if (match) {
+      mapping[field.key] = match.original;
+      continue;
+    }
+
+    // 3. Exact alias match
+    match = normHeaders.find((h) =>
+      (field.aliases || []).some((a) => a.toLowerCase() === h.original.toLowerCase()),
+    );
+    if (match) {
+      mapping[field.key] = match.original;
+      continue;
+    }
+
+    // 4. Normalized alias match
+    match = normHeaders.find((h) => aliasesNorm.includes(h.norm));
+    if (match) {
+      mapping[field.key] = match.original;
+      continue;
+    }
+
+    // 5. Substring / Token matching
+    // Check if any header contains the field key or alias tokens, or vice versa
+    const tokens = [fieldNorm, ...aliasesNorm];
+    match = normHeaders.find((h) => {
+      return tokens.some((t) => {
+        if (!t || t.length < 3) return false;
+        return h.norm.includes(t) || t.includes(h.norm);
+      });
+    });
+
+    if (match) {
+      mapping[field.key] = match.original;
+    } else {
+      mapping[field.key] = "";
+    }
+  }
+
+  return mapping;
+}
+
 export function validateCsvForTable(
   headers: string[],
   tableKey: string,
+  columnMapping?: Record<string, string>,
 ): ValidationResult {
   const config = TABLE_CONFIGS[tableKey];
   if (!config) {
@@ -133,6 +330,46 @@ export function validateCsvForTable(
 
   if (!headers || headers.length === 0) {
     return { valid: false, message: "The CSV file contains no header columns." };
+  }
+
+  // If explicit columnMapping is provided
+  if (columnMapping && Object.keys(columnMapping).length > 0) {
+    const missingRequired: string[] = [];
+    let mappedCount = 0;
+
+    for (const field of config.fields) {
+      const mappedHeader = columnMapping[field.key];
+      if (mappedHeader && mappedHeader.trim() !== "") {
+        const headerExists = headers.some(
+          (h) => h === mappedHeader || normalizeKey(h) === normalizeKey(mappedHeader),
+        );
+        if (headerExists) {
+          mappedCount++;
+        } else if (field.required) {
+          const displayHeader = field.aliases?.[0] || field.key;
+          missingRequired.push(displayHeader);
+        }
+      } else if (field.required) {
+        const displayHeader = field.aliases?.[0] || field.key;
+        missingRequired.push(displayHeader);
+      }
+    }
+
+    if (missingRequired.length > 0) {
+      return {
+        valid: false,
+        message: `Missing required column mapping(s): ${missingRequired.map((m) => `"${m}"`).join(", ")}. Please select a corresponding CSV column.`,
+      };
+    }
+
+    if (mappedCount === 0) {
+      return {
+        valid: false,
+        message: `No columns from the CSV are mapped to target category '${config.label}'.`,
+      };
+    }
+
+    return { valid: true };
   }
 
   const normHeaders = headers.map((h) => normalizeKey(h));
@@ -250,6 +487,7 @@ export function normalizeKey(str: string): string {
 export function buildRow(
   row: Record<string, string>,
   fields: FieldSpec[],
+  columnMapping?: Record<string, string>,
 ): { body: Record<string, unknown>; error?: string } {
   const normalizedRow: Record<string, string> = {};
   for (const [key, value] of Object.entries(row)) {
@@ -260,17 +498,31 @@ export function buildRow(
   for (const field of fields) {
     let raw: string | undefined = undefined;
 
-    // Check direct key
-    const directNormalizedKey = normalizeKey(field.key);
-    if (normalizedRow[directNormalizedKey] !== undefined) {
-      raw = normalizedRow[directNormalizedKey];
-    } else if (field.aliases) {
-      // Check aliases
-      for (const alias of field.aliases) {
-        const normAlias = normalizeKey(alias);
-        if (normalizedRow[normAlias] !== undefined) {
-          raw = normalizedRow[normAlias];
-          break;
+    if (columnMapping !== undefined) {
+      const mappedHeader = columnMapping[field.key];
+      if (mappedHeader && mappedHeader.trim() !== "") {
+        if (row[mappedHeader] !== undefined) {
+          raw = row[mappedHeader];
+        } else {
+          const normMapped = normalizeKey(mappedHeader);
+          if (normalizedRow[normMapped] !== undefined) {
+            raw = normalizedRow[normMapped];
+          }
+        }
+      }
+    } else {
+      // Check direct key
+      const directNormalizedKey = normalizeKey(field.key);
+      if (normalizedRow[directNormalizedKey] !== undefined) {
+        raw = normalizedRow[directNormalizedKey];
+      } else if (field.aliases) {
+        // Check aliases
+        for (const alias of field.aliases) {
+          const normAlias = normalizeKey(alias);
+          if (normalizedRow[normAlias] !== undefined) {
+            raw = normalizedRow[normAlias];
+            break;
+          }
         }
       }
     }
@@ -283,6 +535,30 @@ export function buildRow(
 
     if (value !== undefined) {
       body[field.key] = value;
+    }
+  }
+
+  // If AddressLine1 exists, intelligently split into AddressLine2, City (suburb), State, Postcode, Country if not already provided
+  if (typeof body.AddressLine1 === "string" && (body.AddressLine1 as string).trim() !== "") {
+    const rawAddress = body.AddressLine1 as string;
+    if (!body.City || !body.State || !body.Postcode) {
+      const parsed = parseAddress(rawAddress);
+      if (parsed.city && !body.City) body.City = parsed.city;
+      if (parsed.state && !body.State) body.State = parsed.state;
+      if (parsed.postcode && !body.Postcode) body.Postcode = parsed.postcode;
+      if (parsed.addressLine2 && !body.AddressLine2) body.AddressLine2 = parsed.addressLine2;
+      if (parsed.country && !body.Country) body.Country = parsed.country;
+      body.AddressLine1 = parsed.addressLine1;
+    }
+  }
+
+  // Synchronize PrimaryContact details with general Email/Phone if only one was provided
+  if (body.PrimaryContactName) {
+    if (!body.PrimaryContactEmail && body.Email) {
+      body.PrimaryContactEmail = body.Email;
+    }
+    if (!body.PrimaryContactPhone && body.Phone) {
+      body.PrimaryContactPhone = body.Phone;
     }
   }
 

@@ -1,0 +1,5 @@
+Capstone Title,Abstract,PPA Document,IP Agreement Details,Term,Calendar Year,Project Status,Special Remarks
+Autonomous Underwater Submersible Telemetry,"Low-latency acoustic underwater telemetry and mesh data collection for coral reef monitoring.",Signed Maritime PPA 2026,Full IP Assignment,S1,2026,ongoing,"Field testing scheduled off Moreton Bay in May."
+Clinical NLP Patient Discharge Summarizer,"Fine-tuned open-source LLM transforming raw physician notes into standardized FHIR discharge summaries.",Hospital Alliance PPA 2026,Shared License Agreement,S2,2026,proposed,"Requires HIPAA/Privacy compliance audit."
+Edge AI Traffic Congestion Predictor,"Real-time YOLOv8 video stream inference on edge Jetson devices at urban intersections.",Smart City PPA 2026,Full IP Assignment,S1,2026,ongoing,"Hardware sponsored by Brisbane City Council."
+Microgrid Peer-to-Peer Energy Trading,"Smart contracts on Ethereum L2 for decentralized residential solar energy credit exchange.",EnergyTech PPA 2026,Student IP Retained,S2,2026,proposed,"Blockchain security review pending."

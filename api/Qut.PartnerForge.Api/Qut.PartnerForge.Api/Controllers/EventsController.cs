@@ -70,6 +70,7 @@ public class EventsController : ControllerBase
                 e.Location,
                 e.FacultyId,
                 e.Faculty != null ? e.Faculty.Name : null,
+                e.Notes,
                 e.Attendances.Count(a => a.DeletedAt == null),
                 e.UpdatedAt
             ))
@@ -96,6 +97,7 @@ public class EventsController : ControllerBase
                 e.Location,
                 e.FacultyId,
                 e.Faculty != null ? e.Faculty.Name : null,
+                e.Notes,
                 e.Attendances.Count(a => a.DeletedAt == null),
                 e.UpdatedAt
             ))

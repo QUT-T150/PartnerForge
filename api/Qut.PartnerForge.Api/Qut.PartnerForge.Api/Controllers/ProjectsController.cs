@@ -88,6 +88,7 @@ public class ProjectsController : ControllerBase
                 p.ProjectPartnerAgreement,
                 p.StudentProjectAgreement,
                 p.IpAssignmentRationale,
+                p.Notes,
                 p.UpdatedAt
             ))
             .ToListAsync();
@@ -125,6 +126,7 @@ public class ProjectsController : ControllerBase
                 p.ProjectPartnerAgreement,
                 p.StudentProjectAgreement,
                 p.IpAssignmentRationale,
+                p.Notes,
                 p.UpdatedAt
             ))
             .FirstOrDefaultAsync();

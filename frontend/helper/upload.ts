@@ -28,6 +28,16 @@ export async function uploadFileAction(
   }
 
   const config = TABLE_CONFIGS[table];
+  const mappingRaw = formData.get("columnMapping");
+  let columnMapping: Record<string, string> | undefined = undefined;
+  if (typeof mappingRaw === "string" && mappingRaw.trim().startsWith("{")) {
+    try {
+      columnMapping = JSON.parse(mappingRaw);
+    } catch {
+      // ignore invalid json
+    }
+  }
+
   const text = await file.text();
   const parsed = Papa.parse<Record<string, string>>(text, {
     header: true,
@@ -42,7 +52,7 @@ export async function uploadFileAction(
   }
 
   const headers = parsed.meta.fields || [];
-  const validation = validateCsvForTable(headers, table);
+  const validation = validateCsvForTable(headers, table, columnMapping);
   if (!validation.valid) {
     return {
       status: "error",
@@ -69,7 +79,7 @@ export async function uploadFileAction(
 
   for (let i = 0; i < rows.length; i++) {
     const rowNumber = i + 2; // account for header row + 1-indexing
-    const { body, error } = buildRow(rows[i], config.fields);
+    const { body, error } = buildRow(rows[i], config.fields, columnMapping);
     if (error) {
       errors.push(`Row ${rowNumber}: ${error}`);
       continue;
