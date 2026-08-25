@@ -7,6 +7,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <UserSecretsId>4e3cfa18-fbc0-4ac5-9407-af9d5f0868a3</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904</NoWarn>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

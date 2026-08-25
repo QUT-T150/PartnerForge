@@ -41,10 +41,8 @@ actually want. **Ask:** concrete example questions they need answered
 (e.g. "most active partners over 3 years"), preferred output (dashboard vs export),
 and whether Azure tooling is on the table.
 
-### 5. Branch protection interim rule — team decision
-[#11](https://github.com/QUT-T150/PartnerForge/issues/11) wants 1 approving review +
-green CI, but CI doesn't exist yet ([#18](https://github.com/QUT-T150/PartnerForge/issues/18)).
-**Ask:** agree to enable the review-only rule now and add the CI requirement when #18 lands.
+### 5. Branch protection rule — resolved in #11
+[#11](https://github.com/QUT-T150/PartnerForge/issues/11) establishes the hard rule (1 approving review + green CI on `main` and `staging`), documented in `CONTRIBUTING.md` with automated GitHub Actions CI in `.github/workflows/ci.yml`.
 
 ## Early flag (Sprint 4)
 
