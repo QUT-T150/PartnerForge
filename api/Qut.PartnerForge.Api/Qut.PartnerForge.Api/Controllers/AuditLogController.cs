@@ -3,6 +3,7 @@ using Qut.PartnerForge.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Qut.PartnerForge.Api.Controllers;
 
@@ -12,7 +13,8 @@ namespace Qut.PartnerForge.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "admin,course_organiser")]
+
 public class AuditLogController : ControllerBase
 {
     private const int MaxPageSize = 1000;
@@ -42,12 +44,18 @@ public class AuditLogController : ControllerBase
     public async Task<ActionResult<AuditLogPageDto>> GetAuditLog(
         [FromQuery] string? action,
         [FromQuery] string? tableName,
+        [FromQuery] Guid? recordId,
         [FromQuery] Guid? changedBy,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25)
     {
+        var isAdmin = User.IsInRole("admin");
+if (!isAdmin && !recordId.HasValue)
+{
+    return Forbid();
+}
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
@@ -58,7 +66,8 @@ public class AuditLogController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(tableName))
             query = query.Where(a => a.TableName == tableName);
-
+          if (recordId.HasValue)
+              query = query.Where(a => a.RecordId == recordId.Value);
         if (changedBy.HasValue)
             query = query.Where(a => a.ChangedBy == changedBy.Value);
 

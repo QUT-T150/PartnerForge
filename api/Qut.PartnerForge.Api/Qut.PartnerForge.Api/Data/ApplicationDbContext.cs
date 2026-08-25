@@ -190,9 +190,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<MostActivePartner>().HasNoKey().ToView("v_most_active_partners_3yr");
 
         // Apply snake_case naming to all tables and columns to match schema.sql.
-        // Table names are based on the DbSet property names directly: the relational convention
-        // that does this doesn't run under the InMemory provider (used in tests), which would
-        // otherwise fall back to singular class names and diverge from the MySQL mapping.
+        // Apply snake_case naming to all tables and columns to match schema.sql.
+        // Table name is derived from the DbSet property name (not GetTableName()'s
+        // provider-dependent default) so InMemory-provider tests match production MySQL naming.
         var dbSetNames = typeof(ApplicationDbContext).GetProperties()
             .Where(p => p.PropertyType.IsGenericType &&
                         p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))

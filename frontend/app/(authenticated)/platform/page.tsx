@@ -9,6 +9,7 @@ import {
   canEdit,
   canDelete,
   prettyRole,
+  getPermissions,
   type Role,
   type EntityType,
 } from "@/lib/permissions";
@@ -163,7 +164,7 @@ const FIELD_SETS: Record<string, FieldDef[]> = {
       "Role",
       "select",
       true,
-      ["admin", "course_organiser", "industry_partner"],
+      ["admin", "course_organiser", "industry_partner","industry_team", "industry_team_manager"],
     ],
     ["facultyId", "Faculty ID", "number", false],
     ["organisationId", "Organisation", "select-org-empty", false],
@@ -177,6 +178,13 @@ const API_PATHS: Record<string, string> = {
   application: "/projectapplications",
   event: "/events",
   user: "/users",
+};
+const AUDIT_TABLE_NAMES: Record<string, string> = {
+  partner: "organisations",
+  project: "projects",
+  application: "project_applications",
+  event: "events",
+  user: "users",
 };
 
 function filterRows(rows: any[], filters: Record<string, string>): any[] {
@@ -194,6 +202,7 @@ function PlatformContent() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const role = (user?.role || "industry_partner") as Role;
+  const perms = getPermissions(role);
 
   const [partners, setPartners] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -202,6 +211,14 @@ function PlatformContent() {
   const [users, setUsers] = useState<any[]>([]);
   const [industries, setIndustries] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Search results are paginated, so the rows in state are one page rather than
+  // the whole set. The search response carries the real count -- keep it so the
+  // summary tiles report the total (or the filtered total) instead of the page
+  // size. Null means no search has run and the row arrays are already complete.
+  const [partnersTotal, setPartnersTotal] = useState<number | null>(null);
+  const [projectsTotal, setProjectsTotal] = useState<number | null>(null);
+  const [eventsTotal, setEventsTotal] = useState<number | null>(null);
 
   // Filters
   const [applicationsSearch, setApplicationsSearch] = useState("");
@@ -219,7 +236,7 @@ function PlatformContent() {
 
   const view = searchParams.get("view") || "all";
   const effectiveView =
-    view === "users" && role !== "admin" ? "all" : VIEW_COPY[view] ? view : "all";
+    view === "users" && perms.users === "no" ? "all" : VIEW_COPY[view] ? view : "all";
 
   const loadData = useCallback(async () => {
     try {
@@ -230,7 +247,7 @@ function PlatformContent() {
         request("/events"),
         request("/organisations/industries"),
       ];
-      if (role === "admin") reqs.push(request("/users"));
+      if (perms.users !== "no") reqs.push(request("/users"));
 
       const results = await Promise.all(reqs);
       setPartners(results[0] || []);
@@ -239,6 +256,9 @@ function PlatformContent() {
       setEvents(results[3] || []);
       setIndustries(results[4] || []);
       setUsers(results[5] || []);
+      setPartnersTotal(null);
+      setProjectsTotal(null);
+      setEventsTotal(null);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load data");
@@ -251,16 +271,19 @@ function PlatformContent() {
     loadData();
   }, [loadData]);
 
-  const handlePartnerResults = useCallback((data: { items: any[] }) => {
+  const handlePartnerResults = useCallback((data: { items: any[]; total: number }) => {
     setPartners(data.items);
+    setPartnersTotal(data.total);
   }, []);
 
-  const handleProjectResults = useCallback((data: { items: any[] }) => {
+  const handleProjectResults = useCallback((data: { items: any[]; total: number }) => {
     setProjects(data.items);
+    setProjectsTotal(data.total);
   }, []);
 
-  const handleEventResults = useCallback((data: { items: any[] }) => {
+  const handleEventResults = useCallback((data: { items: any[]; total: number }) => {
     setEvents(data.items);
+    setEventsTotal(data.total);
   }, []);
 
   // Filtered rows
@@ -271,7 +294,7 @@ function PlatformContent() {
     proposedYear: applicationsYear,
   });
   const filteredUsers =
-    role === "admin"
+    perms.users !== "no"
       ? filterRows(users, {
           fullName: usersSearch,
           role: usersRole,
@@ -431,13 +454,13 @@ function PlatformContent() {
           {isVisible("partners") && (
             <div className="summary-card">
               <div className="summary-label">Partners</div>
-              <div className="summary-value">{partners.length}</div>
+              <div className="summary-value">{partnersTotal ?? partners.length}</div>
             </div>
           )}
           {isVisible("projects") && (
             <div className="summary-card">
               <div className="summary-label">Projects</div>
-              <div className="summary-value">{projects.length}</div>
+              <div className="summary-value">{projectsTotal ?? projects.length}</div>
             </div>
           )}
           {isVisible("applications") && (
@@ -451,10 +474,10 @@ function PlatformContent() {
           {isVisible("events") && (
             <div className="summary-card">
               <div className="summary-label">Events</div>
-              <div className="summary-value">{events.length}</div>
+              <div className="summary-value">{eventsTotal ?? events.length}</div>
             </div>
           )}
-          {isVisible("users") && role === "admin" && (
+          {isVisible("users") && perms.users !== "no"  && (
             <div className="summary-card">
               <div className="summary-label">Users</div>
               <div className="summary-value">{filteredUsers.length}</div>
@@ -614,7 +637,7 @@ function PlatformContent() {
         )}
 
         {/* Users Section (admin only) */}
-        {isVisible("users") && role === "admin" && (
+        {isVisible("users") && perms.users !== "no" && (
           <section className="section">
             <div className="section-header">
               <h2>User Management</h2>
@@ -635,6 +658,8 @@ function PlatformContent() {
                 <option value="admin">Admin</option>
                 <option value="course_organiser">Course organiser</option>
                 <option value="industry_partner">Industry partner</option>
+                <option value="industry_team">Industry team</option>
+<option value="industry_team_manager">Industry team manager</option>
               </select>
               <select
                 value={usersActive}
@@ -673,6 +698,8 @@ function PlatformContent() {
           isNew={!modalId}
           onClose={closeModal}
           onSubmit={handleSave}
+          tableName={AUDIT_TABLE_NAMES[modalType]}
+          canViewHistory={role === "admin" || role === "course_organiser"}
         />
       )}
     </div>
