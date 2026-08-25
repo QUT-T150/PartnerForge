@@ -11,7 +11,7 @@ namespace Qut.PartnerForge.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin,course_organiser")]
+[Authorize(Roles = "admin,course_organiser,industry_team_manager")]
 public class AnalyticsController : ControllerBase
 {
     private const int DefaultOrganisationLimit = 100;

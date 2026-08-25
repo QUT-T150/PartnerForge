@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { prettyRole } from "@/lib/permissions";
+import { getPermissions, prettyRole, type Role } from "@/lib/permissions";
 import "./header.css";
 
 interface HeaderProps {
@@ -72,7 +72,7 @@ export default function Header({ subtitle }: HeaderProps) {
           >
             Applications
           </Link>
-          {user.role !== "industry_partner" && (
+          {getPermissions(user.role as Role).analytics !== "no" && (
             <Link href="/analytics" className={navActive("/analytics")}>
               Analytics
             </Link>
