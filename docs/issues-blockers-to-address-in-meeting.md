@@ -2,7 +2,8 @@
 
 Standing agenda of decisions and stakeholder inputs that are blocking upcoming epics.
 Raise these at the next team meeting (and the stakeholder meeting where marked).
-Last updated: 2026-08-20 (week 6), after the coordinator meeting with Wayne.
+Last updated: 2026-09-06 (week 8). Week 6 agenda from the Wayne coordinator meeting,
+with item 4 revised after PR #75 landed branch protection.
 
 ## Resolved since week 4 — no longer blockers
 
@@ -49,15 +50,26 @@ lets a course organiser page the entire audit log rather than one record's histo
 #30 already lists audit-log access for the new roles as an undecided question.
 **Ask:** 10 minutes to decide who reads the global audit log vs per-record history.
 
-### 4. Branch flow: `feature/*` → `staging` → `main` — team decision
-[#11](https://github.com/QUT-T150/PartnerForge/issues/11) ·
-[#17](https://github.com/QUT-T150/PartnerForge/issues/17)
+### 4. Branch flow: `feature/*` → `staging` → `main` — agreed on paper, not in practice
+[#11](https://github.com/QUT-T150/PartnerForge/issues/11) (closed) ·
+[#17](https://github.com/QUT-T150/PartnerForge/issues/17) (open)
 
-`staging` has been 5 commits ahead of `main` since 2026-08-11 with no release PR, which
-is why #19/#23/#56 stayed open after PR #55 merged. PR #57 targets `main` directly,
-which will conflict with that same work. CI exists (`.github/workflows/ci.yaml`), so the
-original blocker on #11 is gone. **Ask:** ratify the flow, write it into CONTRIBUTING
-(#17), and enable branch protection with 1 approving review + green CI (#11).
+Half resolved since week 6. #11 is closed: PR #75 added `.github/workflows/ci.yml`,
+a PR template, and `CONTRIBUTING.md` documenting 1 approving review + green CI, and
+branch protection is now actually enabled on `main`.
+
+What has not changed is the behaviour the rule was meant to fix. `staging` sat 7 commits
+ahead of `main` for 16 days holding the whole of PR #57 — the five-role RBAC model — because
+release PR #69 went in *before* #57 landed. Both open PRs from that period, #74 and #76,
+target `main` directly and bypass `staging`, which is what CONTRIBUTING.md now tells us
+not to do. #74 edits `frontend/lib/permissions.ts` against the three-role model, and
+`git merge-tree origin/staging origin/feature/csv-upload` conflicts on exactly that file;
+whichever side merges second gets hand-resolved and either the `upload` permission or the
+two new roles silently go missing.
+
+**Ask:** ratify the flow in practice (#17) — retarget #74 and #76 at `staging`, and agree
+that a release PR gets raised the same day anything merges to `staging`, not a fortnight
+later.
 
 ### 5. #30 migration for the two new roles
 PR #57 defers the migration file and `role_permissions` seed rows. Without it, anyone
