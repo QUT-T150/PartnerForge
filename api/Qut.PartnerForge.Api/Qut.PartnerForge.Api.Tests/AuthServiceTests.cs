@@ -156,4 +156,37 @@ public class AuthServiceTests
                 : null
         };
     }
+
+    // ---- refresh token helpers (#39) ----
+
+    [Fact]
+    public void GenerateRefreshToken_ProducesUniqueUrlSafeTokens()
+    {
+        var tokens = Enumerable.Range(0, 500).Select(_ => _auth.GenerateRefreshToken()).ToList();
+
+        // 256 bits of entropy: a collision in 500 draws would mean the RNG is broken
+        Assert.Equal(tokens.Count, tokens.Distinct().Count());
+
+        foreach (var token in tokens)
+        {
+            Assert.DoesNotContain('+', token);
+            Assert.DoesNotContain('/', token);
+            Assert.DoesNotContain('=', token);
+            Assert.True(token.Length >= 43, $"token too short: {token.Length}");
+        }
+    }
+
+    [Fact]
+    public void HashRefreshToken_IsDeterministicAndHidesTheRawValue()
+    {
+        var raw = _auth.GenerateRefreshToken();
+
+        var hash = _auth.HashRefreshToken(raw);
+
+        Assert.Equal(hash, _auth.HashRefreshToken(raw));          // same input, same hash
+        Assert.NotEqual(raw, hash);                                // never stores the raw token
+        Assert.Equal(64, hash.Length);                             // SHA-256 as hex
+        Assert.Matches("^[0-9a-f]{64}$", hash);
+        Assert.NotEqual(hash, _auth.HashRefreshToken(_auth.GenerateRefreshToken()));
+    }
 }

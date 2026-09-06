@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const COOKIE_NAME = "auth-token";
+const REFRESH_COOKIE_NAME = "refresh-token";
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -18,8 +19,17 @@ function isTokenExpired(token: string): boolean {
 
 export function middleware(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value;
+  const refreshToken = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
 
   if (!token || isTokenExpired(token)) {
+    // Middleware runs on the edge and cannot call the API, so it does not refresh
+    // here. A usable refresh cookie means the session is very likely renewable, so
+    // let the request through: /api/auth/session and the proxy both renew on demand
+    // and will 401 for real if the refresh token turns out to be spent.
+    if (refreshToken) {
+      return NextResponse.next();
+    }
+
     const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
