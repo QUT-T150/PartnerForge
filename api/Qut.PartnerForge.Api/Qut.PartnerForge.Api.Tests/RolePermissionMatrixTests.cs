@@ -13,29 +13,29 @@ public class RolePermissionMatrixTests
     public static IEnumerable<object[]> EndpointRoleMatrix => new List<object[]>
     {
         // Organisations
-        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisations), (object?)null },
-        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisation), (object?)null},
+        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisations), null! },
+        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisation), null!},
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.CreateOrganisation), "admin,course_organiser" },
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.UpdateOrganisation), "admin,course_organiser" },
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.DeleteOrganisation), "admin" },
 
         // Projects
-        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProjects),(object?)null },
-        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProject), (object?)null },
+        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProjects),null! },
+        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProject), null! },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.CreateProject), "admin,course_organiser" },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.UpdateProject), "admin,course_organiser" },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.DeleteProject), "admin" },
 
         // ProjectApplications
-        new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.GetProjectApplications), (object?)null },
-        new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.GetProjectApplication), (object?)null },
+        new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.GetProjectApplications), null! },
+        new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.GetProjectApplication), null! },
         new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.CreateProjectApplication), "admin,course_organiser,industry_partner" },
         new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.UpdateProjectApplication), "admin,course_organiser,industry_partner" },
         new object[] { typeof(ProjectApplicationsController), nameof(ProjectApplicationsController.DeleteProjectApplication), "admin,course_organiser" },
 
         // Events
-        new object[] { typeof(EventsController), nameof(EventsController.GetEvents), (object?)null },
-        new object[] { typeof(EventsController), nameof(EventsController.GetEvent), (object?)null},
+        new object[] { typeof(EventsController), nameof(EventsController.GetEvents), null! },
+        new object[] { typeof(EventsController), nameof(EventsController.GetEvent), null!},
         new object[] { typeof(EventsController), nameof(EventsController.CreateEvent), "admin,course_organiser" },
         new object[] { typeof(EventsController), nameof(EventsController.UpdateEvent), "admin,course_organiser" },
         new object[] { typeof(EventsController), nameof(EventsController.DeleteEvent), "admin" },
