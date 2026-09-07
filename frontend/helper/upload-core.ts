@@ -92,12 +92,32 @@ export function parseAddress(raw: string): ParsedAddress {
 
   const remainingParts = working.split(",").map((p) => p.trim()).filter(Boolean);
   if (remainingParts.length >= 2) {
-    if (
-      /^(suite|unit|level|floor|apt|apartment|building|bld|room)\b/i.test(remainingParts[1]) ||
-      /^(suite|unit|level|floor|apt|apartment|building|bld|room)\b/i.test(remainingParts[0])
-    ) {
-      addressLine1 = remainingParts[0];
-      addressLine2 = remainingParts.slice(1).join(", ");
+    const isUnitLevel = (s: string) =>
+      /^(suite|unit|level|floor|apt|apartment|building|bld|room|lot|shop|tower|block)\b/i.test(s) ||
+      /^#\d+/i.test(s);
+
+    const unitParts: string[] = [];
+    const streetParts: string[] = [];
+
+    for (const part of remainingParts) {
+      if (isUnitLevel(part)) {
+        unitParts.push(part);
+      } else {
+        streetParts.push(part);
+      }
+    }
+
+    if (streetParts.length > 0 && unitParts.length > 0) {
+      addressLine1 = streetParts.join(", ");
+      addressLine2 = unitParts.join(", ");
+    } else if (remainingParts.length >= 2) {
+      if (isUnitLevel(remainingParts[0])) {
+        addressLine1 = remainingParts.slice(1).join(", ");
+        addressLine2 = remainingParts[0];
+      } else {
+        addressLine1 = remainingParts[0];
+        addressLine2 = remainingParts.slice(1).join(", ");
+      }
     }
   }
 
@@ -118,7 +138,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     batchEndpoint: "/api/Organisations/batch",
     fields: [
       { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name", "partner"] },
-      { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id"] },
+      { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id", "partner id", "organisation id", "org id"] },
       { key: "Abn", type: "string", aliases: ["abn", "australian business number"] },
       { key: "AddressLine1", type: "string", aliases: ["address", "address line 1", "street address", "location", "office address"] },
       { key: "AddressLine2", type: "string", aliases: ["address line 2", "unit", "suite", "level", "building"] },
@@ -127,14 +147,14 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { key: "Postcode", type: "string", aliases: ["postcode", "postal code", "zip", "zip code"] },
       { key: "Country", type: "string", aliases: ["country", "nation"], defaultValue: "Australia" },
       { key: "Website", type: "string", aliases: ["website", "url", "web", "company website"] },
-      { key: "PrimaryContactName", type: "string", aliases: ["industy partner contact name(s)", "industry partner contact name(s)", "contact name", "primary contact name", "contact", "industry supervisor's name", "supervisor name"] },
+      { key: "PrimaryContactName", type: "string", aliases: ["primary contact name", "contact name", "contact", "industry partner contact name(s)", "industy partner contact name(s)", "industry supervisor's name", "supervisor name"] },
       { key: "PrimaryContactPosition", type: "string", aliases: ["position title", "contact position", "title", "job title", "industry supervisor's position title", "supervisor position title"] },
       { key: "PrimaryContactEmail", type: "string", aliases: ["primary contact email", "contact email", "supervisor email"] },
       { key: "PrimaryContactPhone", type: "string", aliases: ["primary contact phone", "contact phone", "supervisor phone", "contact mobile"] },
       { key: "Email", type: "string", aliases: ["business email", "email", "office email", "company email", "organisation email"] },
       { key: "Phone", type: "string", aliases: ["business phone", "phone", "office phone", "company phone", "telephone"] },
       { key: "OrganisationInformation", type: "string", aliases: ["organisation information", "organization information", "company info", "about", "description"] },
-      { key: "Notes", type: "string", aliases: ["project_id", "project id", "notes", "comments", "remarks"] },
+      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks", "notes/comments"] },
       { key: "PartnershipStatus", type: "string", required: false, defaultValue: "active" },
     ],
   },
@@ -167,7 +187,7 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
     batchEndpoint: "/api/Organisations/batch",
     fields: [
       { key: "Name", type: "string", required: true, aliases: ["organisation name", "organization name", "company name", "name", "partner"] },
-      { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id"] },
+      { key: "RegistrationId", type: "string", aliases: ["registration id", "registration_id", "reg id", "partner id", "organisation id", "org id"] },
       { key: "Abn", type: "string", aliases: ["abn", "australian business number"] },
       { key: "AddressLine1", type: "string", aliases: ["address", "address line 1", "street address", "location", "office address"] },
       { key: "AddressLine2", type: "string", aliases: ["address line 2", "unit", "suite", "level", "building"] },
@@ -176,14 +196,14 @@ export const TABLE_CONFIGS: Record<string, TableConfig> = {
       { key: "Postcode", type: "string", aliases: ["postcode", "postal code", "zip", "zip code"] },
       { key: "Country", type: "string", aliases: ["country", "nation"], defaultValue: "Australia" },
       { key: "Website", type: "string", aliases: ["website", "url", "web", "company website"] },
-      { key: "PrimaryContactName", type: "string", aliases: ["industry supervisor's name", "industry supervisor name", "supervisor name", "contact name", "primary contact name", "contact"] },
-      { key: "PrimaryContactPosition", type: "string", aliases: ["industry supervisor's position title", "supervisor position title", "position title", "job title"] },
+      { key: "PrimaryContactName", type: "string", aliases: ["primary contact name", "contact name", "contact", "industry supervisor's name", "industry supervisor name", "supervisor name"] },
+      { key: "PrimaryContactPosition", type: "string", aliases: ["position title", "contact position", "job title", "title", "industry supervisor's position title", "supervisor position title"] },
       { key: "PrimaryContactEmail", type: "string", aliases: ["primary contact email", "contact email", "supervisor email"] },
       { key: "PrimaryContactPhone", type: "string", aliases: ["primary contact phone", "contact phone", "supervisor phone", "contact mobile"] },
       { key: "Phone", type: "string", aliases: ["business phone", "phone", "office phone", "company phone", "telephone"] },
       { key: "Email", type: "string", aliases: ["business email", "email", "office email", "company email", "organisation email"] },
       { key: "OrganisationInformation", type: "string", aliases: ["organisation information", "organization information", "company info", "about", "description"] },
-      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks", "project_id", "project id"] },
+      { key: "Notes", type: "string", aliases: ["notes", "comments", "remarks", "notes/comments"] },
       { key: "PartnershipStatus", type: "string", required: false, defaultValue: "prospect" },
     ],
   },
@@ -569,7 +589,44 @@ export function generateSampleCsv(tableKey: string): string {
   const config = TABLE_CONFIGS[tableKey];
   if (!config) return "";
 
-  const headers = config.fields.map((f) => f.aliases?.[0] || f.key);
+  const headers = config.fields.map((f) => {
+    if (f.key === "AddressLine1") return "Address Line 1";
+    if (f.key === "AddressLine2") return "Address Line 2";
+    if (f.key === "PrimaryContactName") return "Primary Contact Name";
+    if (f.key === "PrimaryContactPosition") return "Primary Contact Position";
+    if (f.key === "PrimaryContactEmail") return "Primary Contact Email";
+    if (f.key === "PrimaryContactPhone") return "Primary Contact Phone";
+    if (f.key === "RegistrationId") return "Registration ID";
+    if (f.key === "Abn") return "ABN";
+    if (f.key === "OrganisationInformation") return "Organisation Information";
+    if (f.key === "PartnershipStatus") return "Partnership Status";
+    if (f.key === "OrganisationName") return "Organisation Name";
+    if (f.key === "ProjectPartnerAgreement") return "Project Partner Agreement";
+    if (f.key === "StudentProjectAgreement") return "Student Project Agreement";
+    if (f.key === "IpAssignmentRationale") return "IP Assignment Rationale";
+    if (f.key === "DisciplineArea") return "Discipline Area";
+    if (f.key === "SecondaryItDiscipline") return "Secondary IT Discipline";
+    if (f.key === "ProjectDeliverables") return "Project Deliverables";
+    if (f.key === "ProjectType") return "Project Type";
+    if (f.key === "FullName") return "Full Name";
+    if (f.key === "IsActive") return "Is Active";
+    if (f.key === "FacultyId") return "Faculty ID";
+    if (f.key === "OrganisationId") return "Organisation ID";
+    if (f.key === "ProposedTitle") return "Proposed Title";
+    if (f.key === "ProposedDescription") return "Proposed Description";
+    if (f.key === "ProposedProjectType") return "Proposed Project Type";
+    if (f.key === "ProposedSemester") return "Proposed Semester";
+    if (f.key === "ProposedYear") return "Proposed Year";
+    if (f.key === "ProposedFacultyId") return "Proposed Faculty ID";
+    if (f.key === "ProposedMultipleTeams") return "Proposed Multiple Teams";
+    if (f.key === "ProposedDisciplineArea") return "Proposed Discipline Area";
+    if (f.key === "ProposedSecondaryItDiscipline") return "Proposed Secondary IT Discipline";
+    if (f.key === "ProposedDeliverables") return "Proposed Deliverables";
+    if (f.aliases && f.aliases.length > 0) {
+      return f.aliases[0].replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return f.key.replace(/([A-Z])/g, " $1").trim();
+  });
   const sampleValues = config.fields.map((f) => {
     if (f.key === "Name" || f.key === "OrganisationName") return "TechCorp Australia";
     if (f.key === "Title" || f.key === "ProposedTitle") return "Autonomous Swarm Drone Navigation";

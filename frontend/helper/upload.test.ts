@@ -38,6 +38,34 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(parsed3.state).toBe("NSW");
       expect(parsed3.postcode).toBe("2000");
     });
+
+    it("correctly puts street in AddressLine1 and suite/unit/level in AddressLine2 when leading with suite/level", () => {
+      const parsed1 = parseAddress("Suite 401, Level 4, 100 Eagle St, Brisbane QLD 4000");
+      expect(parsed1.addressLine1).toBe("100 Eagle St");
+      expect(parsed1.addressLine2).toBe("Suite 401, Level 4");
+      expect(parsed1.city).toBe("Brisbane");
+      expect(parsed1.state).toBe("QLD");
+      expect(parsed1.postcode).toBe("4000");
+
+      const parsed2 = parseAddress("Level 12, 500 Collins St, Melbourne VIC 3000, Australia");
+      expect(parsed2.addressLine1).toBe("500 Collins St");
+      expect(parsed2.addressLine2).toBe("Level 12");
+      expect(parsed2.city).toBe("Melbourne");
+      expect(parsed2.state).toBe("VIC");
+      expect(parsed2.postcode).toBe("3000");
+      expect(parsed2.country).toBe("Australia");
+
+      const parsed3 = parseAddress("Unit 5, 12 Smith Street, Southport QLD 4215");
+      expect(parsed3.addressLine1).toBe("12 Smith Street");
+      expect(parsed3.addressLine2).toBe("Unit 5");
+      expect(parsed3.city).toBe("Southport");
+      expect(parsed3.state).toBe("QLD");
+      expect(parsed3.postcode).toBe("4215");
+
+      const parsed4 = parseAddress("100 Eagle St, Level 4, Brisbane QLD 4000");
+      expect(parsed4.addressLine1).toBe("100 Eagle St");
+      expect(parsed4.addressLine2).toBe("Level 4");
+    });
   });
 
   describe("normalizeKey()", () => {
@@ -105,7 +133,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
   });
 
   describe("buildRow() - Entity Field Mappings & Custom Column Mappings", () => {
-    it("correctly maps Industry Partner CSV headers including typos, aliases, address splitting, and notes", () => {
+    it("correctly maps Industry Partner CSV headers including typos, aliases, and address splitting without stashing project_id into notes", () => {
       const config = TABLE_CONFIGS.partners;
       const csvRow = {
         "Project_id": "PRJ-2024-999",
@@ -117,6 +145,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
         "Position Title": "VP of Technology",
         "Email": "s.jenkins@techcorp.com",
         "Phone": "0731234567",
+        "Notes": "Collaborative research partner",
       };
 
       const { body, error } = buildRow(csvRow, config.fields);
@@ -135,7 +164,7 @@ describe("CSV Importer Unit & Performance Tests", () => {
       expect(body.PrimaryContactPhone).toBe("0731234567");
       expect(body.Email).toBe("s.jenkins@techcorp.com");
       expect(body.Phone).toBe("0731234567");
-      expect(body.Notes).toBe("PRJ-2024-999");
+      expect(body.Notes).toBe("Collaborative research partner");
       expect(body.PartnershipStatus).toBe("active");
     });
 
@@ -313,9 +342,14 @@ describe("CSV Importer Unit & Performance Tests", () => {
   });
 
   describe("CSV Sample & Report Generators", () => {
-    it("generates valid CSV sample template for partners", () => {
+    it("generates valid CSV sample template for partners with clean canonical headers", () => {
       const sample = generateSampleCsv("partners");
-      expect(sample).toContain("organisation name");
+      const [headerLine] = sample.split("\n");
+      expect(headerLine).toContain("Organisation Name");
+      expect(headerLine).toContain("Primary Contact Name");
+      expect(headerLine).toContain("Notes");
+      expect(headerLine).not.toContain("project_id");
+      expect(headerLine).not.toContain("industy");
       expect(sample).toContain("TechCorp Australia");
     });
 
