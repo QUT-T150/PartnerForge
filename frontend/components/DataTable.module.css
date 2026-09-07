@@ -1,8 +1,9 @@
 .tableShell {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: var(--card-radius, 4px);
   overflow: hidden;
-  background: #ffffff;
+  background: var(--color-card, #FFFFFF);
+  box-shadow: none;
 }
 
 .tableWrap {
@@ -12,30 +13,42 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  text-align: left;
 }
 
 .table th {
-  background: #f3f4f6;
-  color: #111827;
-  font-weight: 700;
-  text-align: left;
-  padding: 0.85rem;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-subtle, #F8F8F6);
+  color: var(--color-text-muted, #999999);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border, #E8E8E5);
+  white-space: nowrap;
 }
 
 .table td {
-  padding: 0.85rem;
-  border-bottom: 1px solid #edf0f3;
-  color: #1f2937;
+  padding: 14px 18px;
+  border-bottom: 1px solid #F5F5F3;
+  color: var(--color-text-primary, #111111);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  vertical-align: middle;
 }
 
-.table tbody tr:nth-child(even) {
-  background: #fafafa;
+.table tbody tr {
+  transition: background-color 0.1s ease;
 }
 
 .table tbody tr:hover {
-  background: #f0f7ff;
+  background-color: var(--color-row-hover, #FAFAF8);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .footer {
@@ -43,41 +56,53 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem;
-  border-top: 1px solid #e5e7eb;
-  background: #ffffff;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border, #E8E8E5);
+  background: var(--color-card, #FFFFFF);
 }
 
 .count {
-  color: #4b5563;
-  font-size: 0.9rem;
+  color: var(--color-text-mid, #555555);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 .pagination {
   display: flex;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
 .button {
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: var(--button-radius, 2px);
+  background: var(--color-subtle, #F8F8F6);
+  color: var(--color-text-mid, #555555);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   cursor: pointer;
-  padding: 0.45rem 0.75rem;
+  padding: 6px 12px;
+  transition: all 0.1s ease;
 }
 
 .button:hover:not(:disabled) {
-  background: #f3f4f6;
+  background: #EAEAEA;
+  color: var(--color-text-primary, #111111);
+  border-color: #D1D5DB;
 }
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .empty {
-  padding: 1.25rem;
-  color: #6b7280;
+  padding: 32px 20px;
+  color: var(--color-text-muted, #999999);
+  font-family: var(--font-mono);
+  font-size: 12px;
   text-align: center;
 }

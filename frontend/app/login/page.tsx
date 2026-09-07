@@ -73,8 +73,9 @@ export default function LoginPage() {
             width={48}
             height={48}
           />
+          <div className="category-label">PARTNERFORGE — AUTHENTICATION</div>
           <h1>Industry Relations Database</h1>
-          <p className="subtitle">Sign in to access the dashboard</p>
+          <p className="subtitle">Sign in to access your platform workspace</p>
         </div>
 
         <form onSubmit={handleSubmit}>

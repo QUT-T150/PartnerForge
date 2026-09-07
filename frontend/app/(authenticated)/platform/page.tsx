@@ -23,27 +23,32 @@ import "./platform.css";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const VIEW_COPY: Record<string, { title: string; context: string }> = {
+const VIEW_COPY: Record<string, { category: string; title: string; context: string }> = {
   partners: {
+    category: "PARTNERFORGE — ORGANISATIONS",
     title: "Industry Partners",
     context:
       "Partners can have multiple approved projects and pending project applications.",
   },
   projects: {
+    category: "PARTNERFORGE — PROJECTS",
     title: "Projects",
     context: "Approved project records linked to industry partners.",
   },
   applications: {
+    category: "PARTNERFORGE — APPLICATIONS",
     title: "Project Applications",
     context:
       "Pending partner-submitted applications waiting for review or approval.",
   },
   events: {
+    category: "PARTNERFORGE — EVENTS",
     title: "Events",
     context:
       "Showcases, expos, meetings, and other industry engagement records.",
   },
   users: {
+    category: "PARTNERFORGE — ACCESS & USERS",
     title: "User Management",
     context: "Admin-only account, role, and access management.",
   },
@@ -294,7 +299,8 @@ function PlatformContent() {
       : [];
 
   const copy = VIEW_COPY[effectiveView];
-  const pageTitle = copy ? copy.title : "Partner and Projects View";
+  const pageCategory = copy ? copy.category : "PARTNERFORGE — PLATFORM";
+  const pageTitle = copy ? copy.title : "Platform Overview";
   const pageContext = copy
     ? copy.context
     : `${user?.fullName || "User"} (${prettyRole(role) || "signed in"}) can see records scoped by the API.`;
@@ -436,15 +442,16 @@ function PlatformContent() {
   return (
     <div className="platform-page">
       <div className="container">
-        <div className="page-title">
-          <h1>{pageTitle}</h1>
-          <p>{pageContext}</p>
+        <div className="page-header">
+          <div className="category-label">{pageCategory}</div>
+          <h1 className="page-heading">{pageTitle}</h1>
+          <p className="page-subtitle">{pageContext}</p>
         </div>
 
         <div className="summary-grid">
           {isVisible("partners") && (
             <div className="summary-card">
-              <div className="summary-label">Partners</div>
+              <div className="summary-label">Industry Partners</div>
               <div className="summary-value">{partnersTotal ?? partners.length}</div>
             </div>
           )}

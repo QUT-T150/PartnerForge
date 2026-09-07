@@ -244,9 +244,10 @@ export default function AuditLogPage() {
   return (
     <div className="audit-page">
       <div className="container">
-        <div className="page-title">
-          <h1>Audit Log</h1>
-          <p>
+        <div className="page-header">
+          <div className="category-label">PARTNERFORGE — SECURITY & AUDIT</div>
+          <h1 className="page-heading">Audit Log</h1>
+          <p className="page-subtitle">
             Every create, update, and delete made through the API — who did it,
             when, from where, and what changed. Times are UTC.
           </p>

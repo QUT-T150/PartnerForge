@@ -96,25 +96,26 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-container">
-        <div className="welcome">
-          <h2>Welcome back, {firstName}</h2>
-          <p>{welcomeMsg}</p>
+        <div className="dashboard-header">
+          <div className="category-label">PARTNERFORGE — OVERVIEW</div>
+          <h1 className="page-heading">Welcome back, {firstName}</h1>
+          <p className="dashboard-subtitle">{welcomeMsg}</p>
         </div>
 
         {role === "admin" && (
           <div className="admin-only">
             <div className="admin-only-header">
-              <ShieldAlert size={18} />
-              <h3>Administrator tools</h3>
+              <ShieldAlert size={16} />
+              <h3>Administrator Access</h3>
             </div>
             <p>
-              You have full access. From here you can create new organisations,
-              manage users, and configure system-wide settings.
+              You have full system privileges. You can manage partner organisations, project applications,
+              user accounts, and configure system-wide settings.
             </p>
           </div>
         )}
 
-        <div className="section-title">Application tabs</div>
+        <div className="section-title">Navigation & Modules</div>
 
         <div className="grid">
           {TAB_CARDS.map((tab) => {
