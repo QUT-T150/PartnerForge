@@ -5,7 +5,6 @@ import {
   Building2,
   ClipboardList,
   Calendar,
-  FileText,
   BarChart3,
   Users,
   ShieldAlert,
@@ -24,7 +23,7 @@ const WELCOME_MESSAGES: Record<string, string> = {
   admin:
     "You have full access to all features, including user and organisation management.",
   course_organiser:
-    "You can read and edit Industry Partners, Projects, and Events. User management is restricted to administrators.",
+    "You can read and edit Organisations, Projects, and Events. User management is restricted to administrators.",
   industry_partner:
     "You have read-only access to projects and events relevant to your organisation.",
 };
@@ -41,7 +40,7 @@ const TAB_CARDS: TabCard[] = [
   {
     key: "partners",
     Icon: Building2,
-    title: "Industry Partners",
+    title: "Organisations",
     desc: "View and manage QUT's industry partner organisations.",
     href: "/platform?view=partners",
   },
@@ -58,13 +57,6 @@ const TAB_CARDS: TabCard[] = [
     title: "Events",
     desc: "Track showcases, expos, and industry meetings.",
     href: "/platform?view=events",
-  },
-  {
-    key: "applications",
-    Icon: FileText,
-    title: "Project Applications",
-    desc: "Review partner-facing project proposals and submission status.",
-    href: "/platform?view=applications",
   },
   {
     key: "analytics",

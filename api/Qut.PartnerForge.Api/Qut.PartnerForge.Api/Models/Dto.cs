@@ -70,7 +70,11 @@ public record OrganisationListItemDto(
     string? PrimaryContactPhone,
     int ProjectCount,
     int PendingApplicationCount,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    // Year of the organisation's earliest / most recent (non-deleted) project;
+    // null when it has no projects. Answers partnership longevity and recency.
+    int? FirstProjectYear,
+    int? LatestProjectYear
 );
 
 /// <summary>Payload for organisation create/update controllers.</summary>

@@ -110,7 +110,9 @@ public class OrganisationsController : ControllerBase
                     a.DeletedAt == null &&
                     a.ApplicationStatus == "pending" &&
                     a.ResultingProjectId == null),
-                o.UpdatedAt
+                o.UpdatedAt,
+                o.Projects.Where(p => p.DeletedAt == null).Min(p => (int?)p.Year),
+                o.Projects.Where(p => p.DeletedAt == null).Max(p => (int?)p.Year)
             ))
             .ToListAsync();
 
@@ -166,7 +168,9 @@ public class OrganisationsController : ControllerBase
                     a.DeletedAt == null &&
                     a.ApplicationStatus == "pending" &&
                     a.ResultingProjectId == null),
-                o.UpdatedAt
+                o.UpdatedAt,
+                o.Projects.Where(p => p.DeletedAt == null).Min(p => (int?)p.Year),
+                o.Projects.Where(p => p.DeletedAt == null).Max(p => (int?)p.Year)
             ))
             .FirstOrDefaultAsync();
 

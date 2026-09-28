@@ -64,12 +64,6 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
-          <Link
-            href="/platform?view=applications"
-            className={navActive("applications")}
-          >
-            Applications
-          </Link>
           {user.role === "admin" && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management
