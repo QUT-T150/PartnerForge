@@ -35,6 +35,7 @@ public class AuditLogController : ControllerBase
     /// </summary>
     /// <param name="action">Optional action filter (<c>INSERT</c>, <c>UPDATE</c>, <c>DELETE</c>, <c>SOFT_DELETE</c>, <c>RESTORE</c>).</param>
     /// <param name="tableName">Optional table filter.</param>
+    /// <param name="recordId">Optional single-record filter; required for non-admin callers, who may only view one record's history.</param>
     /// <param name="changedBy">Optional acting-user filter.</param>
     /// <param name="from">Optional inclusive lower bound on <c>changed_at</c> (UTC).</param>
     /// <param name="to">Optional inclusive upper bound on <c>changed_at</c> (UTC).</param>
@@ -52,10 +53,10 @@ public class AuditLogController : ControllerBase
         [FromQuery] int pageSize = 25)
     {
         var isAdmin = User.IsInRole("admin");
-if (!isAdmin && !recordId.HasValue)
-{
-    return Forbid();
-}
+        if (!isAdmin && !recordId.HasValue)
+        {
+            return Forbid();
+        }
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
@@ -66,8 +67,10 @@ if (!isAdmin && !recordId.HasValue)
 
         if (!string.IsNullOrWhiteSpace(tableName))
             query = query.Where(a => a.TableName == tableName);
-          if (recordId.HasValue)
-              query = query.Where(a => a.RecordId == recordId.Value);
+
+        if (recordId.HasValue)
+            query = query.Where(a => a.RecordId == recordId.Value);
+
         if (changedBy.HasValue)
             query = query.Where(a => a.ChangedBy == changedBy.Value);
 
