@@ -14,6 +14,7 @@ services:
       - mysql_data:/var/lib/mysql
       # Auto-runs on first DB init only. Delete the volume to re-run.
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./seed_demo.sql:/docker-entrypoint-initdb.d/02_seed_demo.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "qut_partnerforge", "-pchangeme_local_only"]
       interval: 5s
