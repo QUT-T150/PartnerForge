@@ -1,84 +1,150 @@
-# QUT PartnerForge
+# Qut.PartnerForge - Industry Team Partner Management
 
-PartnerForge is an industry engagement and capstone project coordination platform developed for the Queensland University of Technology (QUT). It streamlines the management of industry partner relationships, student project proposals, work integrated learning agreements, networking event attendances, and system audit logs.
+## What is this?
 
----
+A CRM for QUT Professional Services to manage industry partners, projects, and events. Four parts running in Docker:
 
-## Technology Stack
+- **Frontend** (Next.js / React) on port 3000
+- **API** (ASP.NET Core / C#) on port 8080
+- **Database** (MySQL 8.4 LTS) on port 3306
+- **Adminer** (Database Web UI) on port 5050
 
-- **Frontend**: Next.js 16 (App Router, React 19, TypeScript, Tailwind CSS, Turbopack)
-- **Backend API**: ASP.NET Core 10 Web API (.NET 10, C#)
-- **Database**: MySQL 8.4 Server (InnoDB, UTF8MB4)
-- **ORM**: Entity Framework Core 9 / Pomelo MySQL Provider
-- **Authentication**: Asymmetric RSA-signed JSON Web Tokens (RS256) with `httpOnly` cookie session proxying
-- **Testing**: xUnit (Backend) and Vitest (Frontend)
-- **Infrastructure**: Docker & Docker Compose
+## What you need installed
 
----
+1. [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+2. [Node.js 22 LTS](https://nodejs.org/) & [pnpm](https://pnpm.io/) (if developing frontend locally outside Docker)
+3. [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (if developing API outside Docker)
+4. Git
 
-## Quickstart (Local Environment)
+## How to get started (Full-Stack Docker)
 
-### Prerequisites
-- [Docker](https://www.docker.com/) and Docker Compose
-- [.NET 10 SDK](https://dotnet.microsoft.com/)
-- [Node.js 22+](https://nodejs.org/) and [pnpm](https://pnpm.io/)
+Clone the repo:
 
-### 1. Start Database & Adminer
 ```bash
-docker compose up -d
+git clone <repo-url>
+cd Qut.PartnerForge
 ```
-This boots MySQL on port `3306` and the Adminer database manager on `http://localhost:8080`.
 
-### 2. Start Backend API
+Make sure Docker Desktop is open and running.
+
+Then run:
+
 ```bash
-dotnet run --project api/Qut.PartnerForge.Api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.csproj
+docker compose up --build
 ```
-- API Base URL: `http://localhost:5000`
-- Interactive Swagger UI: `http://localhost:5000/swagger`
 
-### 3. Start Frontend Web Application
+First time will take a few minutes because it downloads and builds the .NET, Node.js, and MySQL images.
+
+When services are ready, you can access:
+- **Frontend App:** http://localhost:3000
+- **Swagger API Docs:** http://localhost:8080/swagger
+- **Adminer (Database Manager):** http://localhost:5050
+
+## Development Workflows
+
+### Option A: Full-Stack via Docker
+Run the whole application with a single command:
+```bash
+docker compose up --build
+```
+
+### Option B: Local Frontend Development Loop (Hot Reloading)
+For fast frontend iteration with instant hot-reload:
+1. Start the database and API in Docker:
+   ```bash
+   docker compose up -d db api
+   ```
+2. In a separate terminal, install dependencies and run Next.js locally:
+   ```bash
+   cd frontend
+   pnpm install
+   pnpm dev
+   ```
+   The local Next.js dev server runs at http://localhost:3000 and connects to the Docker API at `http://localhost:8080` (configured in `frontend/.env.local`).
+
+## Seeded test account
+
+The database comes with a test account already created:
+
+- **Email:** admin@system.com
+- **Password:** Admin123!
+- **Role:** Admin
+- **Organisation:** System Administration
+
+## Browsing the database
+
+Adminer runs at http://localhost:5050. Login with:
+
+- **System:** MySQL
+- **Server:** db
+- **Username:** qut_partnerforge
+- **Password:** changeme_local_only
+- **Database:** qut_partnerforge
+
+## Useful commands
+
+Stop all containers:
+
+```bash
+docker compose down
+```
+
+Stop and wipe the database (fresh start):
+
+```bash
+docker compose down -v
+```
+
+Rebuild after code changes:
+
+```bash
+docker compose up --build
+```
+
+Run frontend tests & type-checking locally:
+
 ```bash
 cd frontend
-pnpm install --no-frozen-lockfile
-pnpm dev
+pnpm test
+pnpm run type-check
 ```
-- Web Application: `http://localhost:3000`
-- Documentation Portal: `http://localhost:3000/docs`
 
----
+Run backend unit tests locally:
 
-## Default Seeded Accounts
-
-| Email | Password | Role | Permissions |
-|---|---|---|---|
-| `admin@system.com` | `Admin123!` | `admin` | Full system access, user management, audit logs, global CRUD |
-| `organiser@qut.edu.au` | `Organiser123!` | `course_organiser` | Faculty-scoped projects, applications, and partner management |
-| `partner@techcorp.com` | `Partner123!` | `industry_partner` | Read/write own organisation proposals and linked projects |
-
----
-
-## Verification & Testing
-
-### Backend Unit Tests (.NET)
 ```bash
 dotnet test api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj
 ```
 
-### Frontend Type Check & Tests (Next.js)
+See container logs:
+
 ```bash
-cd frontend
-pnpm run type-check
-pnpm test
-pnpm run build
+docker compose logs -f frontend
+docker compose logs -f api
 ```
 
----
+## Project structure
 
-## Documentation Index
+- `docker-compose.yml` - root compose file that orchestrates db, api, adminer, and frontend
+- `frontend/` - Next.js application (App Router, Tailwind CSS, TypeScript, Vitest)
+  - `Dockerfile` - multi-stage standalone build for production containerisation
+- `api/Qut.PartnerForge.Api/` - ASP.NET Core API solution and unit tests
+- `Schema/` - `schema.sql` (MySQL DDL) and database design documentation
 
-- [Web Documentation Portal](http://localhost:3000/docs) (`/docs`)
-- [API Reference & Search DSL](docs/api.md)
-- [Database Schema & Migrations](docs/database-and-migrations.md)
-- [Local Development Guide](docs/development.md)
-- [Frontend Architecture](docs/frontend-architecture.md)
-- [Contributing & Branch Protection Guidelines](CONTRIBUTING.md)
+## Troubleshooting
+
+**"Cannot connect to Docker daemon"**
+Open Docker Desktop and wait for it to fully start before running any commands.
+
+**Port already in use**
+Ensure ports 3000, 8080, 3306, or 5050 are not used by other running processes.
+
+**API or Frontend keeps crashing**
+Check container logs via `docker compose logs frontend` or `docker compose logs api`. Try `docker compose down -v` then `docker compose up --build` for a fresh restart.
+## Documentation
+
+- [Web documentation portal](http://localhost:3000/docs) (`/docs` in the running app)
+- [API reference and search DSL](docs/api.md)
+- [Database schema and migrations](docs/database-and-migrations.md)
+- [Local development guide](docs/development.md)
+- [Frontend architecture](docs/frontend-architecture.md)
+- [Contributing and branch protection](CONTRIBUTING.md)
