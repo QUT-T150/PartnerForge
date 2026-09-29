@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import Header from "@/components/Header";
 
@@ -136,9 +137,16 @@ function LoadingSkeleton() {
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
+  const router = useRouter();
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
+
+  if (loading || !user) {
     return <LoadingSkeleton />;
   }
 
