@@ -8,6 +8,7 @@ const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role
 // stops other roles landing on a page that can only show them errors.
 const ROLE_GATED_ROUTES: { prefix: string; roles: string[] }[] = [
   { prefix: "/audit-log", roles: ["admin"] },
+  { prefix: "/analytics", roles: ["admin", "course_organiser", "industry_team_manager"] },
 ];
 
 function decodePayload(token: string): Record<string, unknown> | null {
