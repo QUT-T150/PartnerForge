@@ -172,7 +172,7 @@ public class SearchController : ControllerBase
         return entity.ToLowerInvariant() switch
         {
             "organisations" => await ExecuteSearch(
-                _context.Organisations,
+                ApplyOrganisationScope(_context.Organisations),
                 entity,
                 request,
                 o => new OrganisationListItemDto(
@@ -218,7 +218,7 @@ public class SearchController : ControllerBase
                     o.UpdatedAt
                 )),
             "projects" => await ExecuteSearch(
-                _context.Projects,
+                ApplyProjectScope(_context.Projects),
                 entity,
                 request,
                 p => new ProjectListItemDto(
@@ -245,7 +245,7 @@ public class SearchController : ControllerBase
                     p.UpdatedAt
                 )),
             "events" => await ExecuteSearch(
-                _context.Events,
+                ApplyEventScope(_context.Events),
                 entity,
                 request,
                 e => new EventListItemDto(
@@ -408,13 +408,13 @@ public class SearchController : ControllerBase
     /// which must expose a <c>DeletedAt</c> property for soft-delete exclusion.
     /// </summary>
     private async Task<IActionResult> ExecuteSearch<T, TResult>(
-        DbSet<T> dbSet,
+        IQueryable<T> source,
         string entity,
         SearchRequest request,
         Expression<Func<T, TResult>> selector) where T : class
     {
         var propMap = FieldPropertyMaps[entity];
-        IQueryable<T> query = dbSet.AsNoTracking();
+        IQueryable<T> query = source.AsNoTracking();
 
         // Soft-delete exclusion
         var param = Expression.Parameter(typeof(T), "e");
@@ -826,6 +826,71 @@ public class SearchController : ControllerBase
             "lessthan" => Expression.LessThan(accessForCompare, valueExpr),
             _ => throw new InvalidOperationException($"Unknown operator '{filter.Operator}'."),
         };
+    }
+    /// <summary>
+    /// Admins see all organisations; course organisers see approved ones; industry-side roles see only their own.
+    /// </summary>
+    private IQueryable<Organisation> ApplyOrganisationScope(IQueryable<Organisation> query)
+    {
+        if (User.IsInRole("admin"))
+            return query;
+
+        if (User.IsInRole("course_organiser"))
+            return query.Where(o => o.SubmissionStatus == "approved");
+
+        if ((User.IsInRole("industry_partner") ||
+             User.IsInRole("industry_team") ||
+             User.IsInRole("industry_team_manager")) &&
+            Guid.TryParse(User.FindFirstValue("organisation_id"), out var organisationId))
+        {
+            return query.Where(o => o.Id == organisationId);
+        }
+
+        return query.Where(_ => false);
+    }
+
+    /// <summary>
+    /// Admins see all projects; course organisers are scoped by faculty; industry-side roles see only their own organisation's projects.
+    /// </summary>
+    private IQueryable<Project> ApplyProjectScope(IQueryable<Project> query)
+    {
+        if (User.IsInRole("admin"))
+            return query;
+
+        if (User.IsInRole("course_organiser"))
+        {
+            if (int.TryParse(User.FindFirstValue("faculty_id"), out var facultyId))
+                return query.Where(p => p.FacultyId == facultyId);
+
+            return query.Where(p => p.Organisation.SubmissionStatus == "approved");
+        }
+
+        if ((User.IsInRole("industry_partner") ||
+             User.IsInRole("industry_team") ||
+             User.IsInRole("industry_team_manager")) &&
+            Guid.TryParse(User.FindFirstValue("organisation_id"), out var organisationId))
+        {
+            return query.Where(p => p.OrganisationId == organisationId);
+        }
+
+        return query.Where(_ => false);
+    }
+
+    /// <summary>
+    /// Admins see all events; course organisers match their faculty or cross-faculty events; everyone else sees all (events are not partner-scoped).
+    /// </summary>
+    private IQueryable<Event> ApplyEventScope(IQueryable<Event> query)
+    {
+        if (User.IsInRole("admin"))
+            return query;
+
+        if (User.IsInRole("course_organiser") &&
+            int.TryParse(User.FindFirstValue("faculty_id"), out var facultyId))
+        {
+            return query.Where(e => e.FacultyId == facultyId || e.FacultyId == null);
+        }
+
+        return query;
     }
 
     /// <summary>
