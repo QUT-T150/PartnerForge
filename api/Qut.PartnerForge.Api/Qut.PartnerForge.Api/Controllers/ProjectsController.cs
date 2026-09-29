@@ -142,38 +142,20 @@ public class ProjectsController : ControllerBase
     [Authorize(Roles = "admin,course_organiser")]
     public async Task<ActionResult<ProjectListItemDto>> CreateProject(SaveProjectRequest request)
     {
-        var orgId = request.OrganisationId;
-        if (orgId == Guid.Empty || !await _context.Organisations.AnyAsync(o => o.Id == orgId && o.DeletedAt == null))
-        {
-            var defaultOrg = await _context.Organisations.FirstOrDefaultAsync(o => o.DeletedAt == null);
-            if (defaultOrg == null)
-            {
-                defaultOrg = new Organisation
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "General Industry Partner",
-                    PartnershipStatus = "prospect",
-                    SubmissionStatus = "approved",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                _context.Organisations.Add(defaultOrg);
-                await _context.SaveChangesAsync();
-            }
-            orgId = defaultOrg.Id;
-        }
+        if (!await _context.Organisations.AnyAsync(o => o.Id == request.OrganisationId && o.DeletedAt == null))
+            return BadRequest(new { message = "Invalid organisation." });
 
         var project = new Project
         {
             Id = Guid.NewGuid(),
             Title = request.Title,
             Description = request.Description,
-            OrganisationId = orgId,
+            OrganisationId = request.OrganisationId,
             FacultyId = request.FacultyId,
-            ProjectType = string.IsNullOrWhiteSpace(request.ProjectType) ? "Capstone" : request.ProjectType,
-            Semester = string.IsNullOrWhiteSpace(request.Semester) ? "Semester 1" : request.Semester,
-            Year = request.Year <= 0 ? DateTime.UtcNow.Year : request.Year,
-            Status = string.IsNullOrWhiteSpace(request.Status) ? "ongoing" : request.Status,
+            ProjectType = request.ProjectType,
+            Semester = request.Semester,
+            Year = request.Year,
+            Status = request.Status,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             MultipleTeams = request.MultipleTeams,
@@ -194,8 +176,12 @@ public class ProjectsController : ControllerBase
         return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new { id = project.Id });
     }
 
+    /// <summary>Placeholder organisation for imported projects whose organisation could not be matched.</summary>
+    public const string UnassignedImportOrganisationName = "Unassigned (CSV import)";
+
     /// <summary>
-    /// Bulk inserts project records in a single database transaction.
+    /// Bulk inserts project records in a single database transaction. Rows without a valid
+    /// organisation are attached to <see cref="UnassignedImportOrganisationName"/>.
     /// </summary>
     /// <param name="requests">List of project payloads.</param>
     [HttpPost("batch")]
@@ -210,15 +196,18 @@ public class ProjectsController : ControllerBase
             var orgId = request.OrganisationId;
             if (orgId == Guid.Empty || !await _context.Organisations.AnyAsync(o => o.Id == orgId && o.DeletedAt == null))
             {
+                // Rows without a valid organisation go under one clearly named placeholder
+                // (never an arbitrary existing partner) so they can be found and reassigned.
                 if (defaultOrg == null)
                 {
-                    defaultOrg = await _context.Organisations.FirstOrDefaultAsync(o => o.DeletedAt == null);
+                    defaultOrg = await _context.Organisations
+                        .FirstOrDefaultAsync(o => o.Name == UnassignedImportOrganisationName && o.DeletedAt == null);
                     if (defaultOrg == null)
                     {
                         defaultOrg = new Organisation
                         {
                             Id = Guid.NewGuid(),
-                            Name = "General Industry Partner",
+                            Name = UnassignedImportOrganisationName,
                             PartnershipStatus = "prospect",
                             SubmissionStatus = "approved",
                             CreatedAt = DateTime.UtcNow,

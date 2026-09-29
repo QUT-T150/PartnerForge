@@ -101,7 +101,7 @@ public class BulkUploadIntegrationTests
     }
 
     [Fact]
-    public async Task CreateProject_AppliesMultiYearDefaultsAndAutoCreatesOrganisation()
+    public async Task CreateProjectsBatch_AppliesDefaultsAndUsesUnassignedPlaceholder()
     {
         await using var context = CreateContext();
         var controller = new ProjectsController(context)
@@ -130,8 +130,8 @@ public class BulkUploadIntegrationTests
             Notes: null
         );
 
-        var result = await controller.CreateProject(req2023);
-        Assert.IsType<CreatedAtActionResult>(result.Result);
+        var result = await controller.CreateProjectsBatch(new[] { req2023 });
+        Assert.IsType<OkObjectResult>(result.Result);
 
         var savedProject = await context.Projects.Include(p => p.Organisation).SingleAsync();
         Assert.Equal("AI Drone Swarm 2023", savedProject.Title);
@@ -140,7 +140,39 @@ public class BulkUploadIntegrationTests
         Assert.Equal(DateTime.UtcNow.Year, savedProject.Year);
         Assert.Equal("ongoing", savedProject.Status);
         Assert.NotNull(savedProject.Organisation);
-        Assert.Equal("General Industry Partner", savedProject.Organisation.Name);
+        Assert.Equal(ProjectsController.UnassignedImportOrganisationName, savedProject.Organisation.Name);
+    }
+
+    [Fact]
+    public async Task CreateProjectsBatch_UnmatchedOrganisation_NeverFallsBackToAnExistingPartner()
+    {
+        await using var context = CreateContext();
+        var existing = new Organisation { Id = Guid.NewGuid(), Name = "Real Partner Pty Ltd", SubmissionStatus = "approved" };
+        context.Organisations.Add(existing);
+        await context.SaveChangesAsync();
+
+        var controller = new ProjectsController(context)
+        {
+            ControllerContext = CreateAdminContext()
+        };
+
+        var requests = new[]
+        {
+            new SaveProjectRequest("Orphan One", null, Guid.Empty, null, "Capstone", "Semester 1", 2026, "ongoing", null, null, false, null, null, null, null, null, null, null),
+            new SaveProjectRequest("Orphan Two", null, Guid.NewGuid(), null, "Capstone", "Semester 1", 2026, "ongoing", null, null, false, null, null, null, null, null, null, null),
+        };
+
+        var result = await controller.CreateProjectsBatch(requests);
+        Assert.IsType<OkObjectResult>(result.Result);
+
+        var projects = await context.Projects.Include(p => p.Organisation).ToListAsync();
+        Assert.Equal(2, projects.Count);
+        Assert.All(projects, p =>
+        {
+            Assert.NotEqual(existing.Id, p.OrganisationId);
+            Assert.Equal(ProjectsController.UnassignedImportOrganisationName, p.Organisation.Name);
+        });
+        Assert.Single(context.Organisations.Where(o => o.Name == ProjectsController.UnassignedImportOrganisationName));
     }
 
     [Fact]
