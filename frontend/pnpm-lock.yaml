@@ -15,7 +15,7 @@ importers:
         specifier: 16.2.6
         version: 16.2.6(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       papaparse:
-        specifier: ^5.5.3
+        specifier: ^5.5.4
         version: 5.6.0
       react:
         specifier: 19.2.4
@@ -31,7 +31,7 @@ importers:
         specifier: ^20
         version: 20.19.41
       '@types/papaparse':
-        specifier: ^5.3.15
+        specifier: ^5.5.2
         version: 5.5.2
       '@types/react':
         specifier: ^19

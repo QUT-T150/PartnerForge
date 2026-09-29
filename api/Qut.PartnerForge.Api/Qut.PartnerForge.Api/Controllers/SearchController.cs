@@ -210,6 +210,7 @@ public class SearchController : ControllerBase
                         .Where(c => c.DeletedAt == null && c.IsPrimary)
                         .Select(c => c.Phone)
                         .FirstOrDefault(),
+                    o.Notes,
                     o.Projects.Count(p => p.DeletedAt == null),
                     o.ProjectApplications.Count(a =>
                         a.DeletedAt == null &&
@@ -242,6 +243,7 @@ public class SearchController : ControllerBase
                     p.ProjectPartnerAgreement,
                     p.StudentProjectAgreement,
                     p.IpAssignmentRationale,
+                    p.Notes,
                     p.UpdatedAt
                 )),
             "events" => await ExecuteSearch(
@@ -257,6 +259,7 @@ public class SearchController : ControllerBase
                     e.Location,
                     e.FacultyId,
                     e.Faculty != null ? e.Faculty.Name : null,
+                    e.Notes,
                     e.Attendances.Count(a => a.DeletedAt == null),
                     e.UpdatedAt
                 )),

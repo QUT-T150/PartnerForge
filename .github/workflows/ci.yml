@@ -75,8 +75,12 @@ jobs:
 
       - name: Build API Projects
         run: |
-          dotnet build api/Qut.PartnerForge.Api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.csproj --configuration Release --no-restore
-          dotnet build api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj --configuration Release --no-restore
+          dotnet build api/Qut.PartnerForge.Api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.csproj --configuration Release --no-restore -warnAsError
+          dotnet build api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj --configuration Release --no-restore -warnAsError
+
+      - name: Check Formatting
+        run: dotnet format --verify-no-changes --no-restore
+        working-directory: api/Qut.PartnerForge.Api/Qut.PartnerForge.Api
 
       - name: Run Backend Unit Tests
         run: dotnet test api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj --configuration Release --no-build --verbosity normal
