@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { loginPath } from "@/lib/auth-redirect";
 import Header from "@/components/Header";
 
 function LoadingSkeleton() {
@@ -136,9 +137,18 @@ function LoadingSkeleton() {
 }
 
 function AuthGate({ children }: { children: ReactNode }) {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
 
-  if (loading) {
+  // The middleware catches most signed-out visits, but a session can also
+  // expire between the page loading and the session check finishing.
+  useEffect(() => {
+    if (!loading && !user) {
+      const { pathname, search } = window.location;
+      window.location.replace(loginPath({ reason: "expired", next: pathname + search }));
+    }
+  }, [loading, user]);
+
+  if (loading || !user) {
     return <LoadingSkeleton />;
   }
 

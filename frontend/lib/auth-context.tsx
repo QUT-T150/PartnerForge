@@ -8,8 +8,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import type { Role } from "./permissions";
+import { loginPath } from "./auth-redirect";
 
 export interface AuthUser {
   fullName: string;
@@ -36,7 +36,6 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   const fetchSession = useCallback(async () => {
     try {
@@ -62,9 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
-    router.push("/login");
-  }, [router]);
+    // Full navigation rather than clearing `user` first: the auth gate treats a
+    // missing user as an expired session and would redirect with the wrong message.
+    window.location.assign(loginPath({ reason: "signed-out" }));
+  }, []);
 
   return (
     <AuthContext.Provider
