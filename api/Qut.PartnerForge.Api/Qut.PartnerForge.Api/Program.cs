@@ -42,6 +42,7 @@ builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(mysqlVersion!)))
            .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>()));
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<IFilterFieldService, FilterFieldService>();
 
 // Asymmetric JWT validation — only the public key is needed here.
