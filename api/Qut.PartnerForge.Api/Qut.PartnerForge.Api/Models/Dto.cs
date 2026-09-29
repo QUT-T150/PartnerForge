@@ -254,7 +254,6 @@ public record SaveUserRequest(
     Guid? OrganisationId,
     bool IsActive
 );
-
 /// <summary>Single audit event with the acting user resolved for display.</summary>
 public record AuditLogEntryDto(
     long Id,

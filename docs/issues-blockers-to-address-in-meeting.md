@@ -2,60 +2,93 @@
 
 Standing agenda of decisions and stakeholder inputs that are blocking upcoming epics.
 Raise these at the next team meeting (and the stakeholder meeting where marked).
-Last updated: 2026-08-06 (week 4).
+Last updated: 2026-09-06 (week 8). Week 6 agenda from the Wayne coordinator meeting,
+with item 4 revised after PR #75 landed branch protection.
 
-## Blocking Sprint 2 work right now
+## Resolved since week 4 — no longer blockers
 
-### 1. CSV import: sample spreadsheets + field mapping — needs Shailesh
-[#24](https://github.com/QUT-T150/PartnerForge/issues/24) · blocks the whole CSV import epic
-[#3](https://github.com/QUT-T150/PartnerForge/issues/3) (#25–#29, **priority: critical**, Sprint 2)
+- **CSV sample spreadsheets (#24)** — closed as won't do. Wayne: *"You're not going to
+  get it"* — the university has told Shailesh he cannot hand over PII. Replaced by a
+  synthetic dataset (#58) and a flexible, user-mapped importer (#60, #61). Epic #3 is
+  unblocked.
+- **Data analysis requirements (#34)** — closed. Wayne gave concrete questions
+  (partner longevity, most projects, project recency, cross-entity multi-view) and a
+  clear steer that filters answer them rather than a separate reports module.
+  Epic #5, #35 and #36 are unblocked.
+- **Production hosting (#45)** — build-blocking part decided. No installs on the QUT
+  network; portable USB or MySQL on Shailesh's own laptop for the stakeholder (#64,
+  #65), plus our own Azure deployment for the capstone assessment. Post-handover
+  subscription ownership is still open on #45.
+- **PR #55** — merged to `staging` on 2026-08-11; #19, #23 and #56 closed.
 
-We cannot design validation, dedup rules, or the field mapping without real
-spreadsheets. Every week this sits idle the epic slips a sprint. **Ask:** sample
-files (all variants in circulation) and agreement on which columns map to which
-`organisations` / `contacts` / `projects` fields.
+## Blocking right now
 
-### 2. Role permission matrix for the two new roles — team decision
-[#30](https://github.com/QUT-T150/PartnerForge/issues/30) · blocks the role taxonomy epic
-[#4](https://github.com/QUT-T150/PartnerForge/issues/4) (#31–#33, Sprint 2)
+### 1. Stakeholder demo dates — owed to Wayne, this week
+[#68](https://github.com/QUT-T150/PartnerForge/issues/68)
 
-`industry_team` and `industry_team_manager` need an agreed permission set vs
-`course_organiser` before the migration and RBAC changes can be written.
-**Ask:** 30 minutes with the permission matrix on screen; record the decision on #30.
-Include: should `industry_team_manager` get read access to the new audit log page?
+Wayne is arranging a demo with Shailesh **next week** and asked for dates in Discord.
+Nothing has been sent yet. He was explicit about the stakes: the other capstone team is
+being seen in the same window and *"I want you to be ahead of the game."*
+**Ask:** everyone's availability, today, so we can post three options.
 
-### 3. PR #55 review — one approver needed
-[PR #55](https://github.com/QUT-T150/PartnerForge/pull/55) closes #19, #23, #56 (audit
-logging + admin audit browser). Testing instructions are in the PR body. The remaining
-audit & analytics work (#20–#22) builds on it, so a quick review keeps epic
-[#2](https://github.com/QUT-T150/PartnerForge/issues/2) moving.
+### 2. Demo readiness — three issues gate the demo
+[#58](https://github.com/QUT-T150/PartnerForge/issues/58) seed data ·
+[#63](https://github.com/QUT-T150/PartnerForge/issues/63) dashboard ·
+[#62](https://github.com/QUT-T150/PartnerForge/issues/62) hide Project Applications
 
-## Blocking Sprint 3 (weeks 5–6) — decide now to avoid slip
+Projects and Events were empty at the coordinator demo, which is the single thing that
+stopped Wayne seeing the relational model work. Seed data (#58) is the critical one and
+needs projects spread across **multiple years** so the analysis questions on #34 are
+demonstrable. **Ask:** owners for all three, and a rehearsal before the demo.
 
-### 4. Data analysis requirements — needs Shailesh / Wayne
-[#34](https://github.com/QUT-T150/PartnerForge/issues/34) · blocks the data analysis epic
-[#5](https://github.com/QUT-T150/PartnerForge/issues/5) (#35, #36)
+### 3. Audit log access for `course_organiser` — team decision
+[#30](https://github.com/QUT-T150/PartnerForge/issues/30) ·
+[PR #57](https://github.com/QUT-T150/PartnerForge/pull/57)
 
-The Azure-vs-in-app spike (#35) can't start until we know what analysis they
-actually want. **Ask:** concrete example questions they need answered
-(e.g. "most active partners over 3 years"), preferred output (dashboard vs export),
-and whether Azure tooling is on the table.
+PR #57 opens `AuditLogController` to `admin,course_organiser` at the class level, which
+lets a course organiser page the entire audit log rather than one record's history.
+#30 already lists audit-log access for the new roles as an undecided question.
+**Ask:** 10 minutes to decide who reads the global audit log vs per-record history.
 
-### 5. Branch protection interim rule — team decision
-[#11](https://github.com/QUT-T150/PartnerForge/issues/11) wants 1 approving review +
-green CI, but CI doesn't exist yet ([#18](https://github.com/QUT-T150/PartnerForge/issues/18)).
-**Ask:** agree to enable the review-only rule now and add the CI requirement when #18 lands.
+### 4. Branch flow: `feature/*` → `staging` → `main` — agreed on paper, not in practice
+[#11](https://github.com/QUT-T150/PartnerForge/issues/11) (closed) ·
+[#17](https://github.com/QUT-T150/PartnerForge/issues/17) (open)
 
-## Early flag (Sprint 4)
+Half resolved since week 6. #11 is closed: PR #75 added `.github/workflows/ci.yml`,
+a PR template, and `CONTRIBUTING.md` documenting 1 approving review + green CI, and
+branch protection is now actually enabled on `main`.
 
-### 6. Production hosting decision — needs stakeholder + possibly QUT IT
-[#45](https://github.com/QUT-T150/PartnerForge/issues/45) · gates the deployment epic
-[#7](https://github.com/QUT-T150/PartnerForge/issues/7). QUT IT governance approval may
-have long lead times — worth raising the question now even though build work is weeks away.
+What has not changed is the behaviour the rule was meant to fix. `staging` sat 7 commits
+ahead of `main` for 16 days holding the whole of PR #57 — the five-role RBAC model — because
+release PR #69 went in *before* #57 landed. Both open PRs from that period, #74 and #76,
+target `main` directly and bypass `staging`, which is what CONTRIBUTING.md now tells us
+not to do. #74 edits `frontend/lib/permissions.ts` against the three-role model, and
+`git merge-tree origin/staging origin/feature/csv-upload` conflicts on exactly that file;
+whichever side merges second gets hand-resolved and either the `upload` permission or the
+two new roles silently go missing.
+
+**Ask:** ratify the flow in practice (#17) — retarget #74 and #76 at `staging`, and agree
+that a release PR gets raised the same day anything merges to `staging`, not a fortnight
+later.
+
+### 5. #30 migration for the two new roles
+PR #57 defers the migration file and `role_permissions` seed rows. Without it, anyone
+with an existing local database won't have the new roles and the role-aware UI will look
+broken. **Ask:** owner, and a Discord heads-up to rebuild local DBs when #57 lands.
+
+## Early flags
+
+- **Portable means single-user.** Wayne acknowledged it is beyond our scope but insisted
+  the limitation be documented as an option with its trade-offs — belongs in #53 and #54.
+- **Event invitations (#66)** were requested, but Wayne flagged himself that outbound
+  mail is hard from a USB deployment. Parked at low priority pending #64.
+- **`Microsoft.OpenApi` 2.4.1 high-severity advisory (#67)** — every build warns.
 
 ## Housekeeping
 
 - Old `bruceniyibitanga-qut/Cobble` repo: all branches exist identically on
   `QUT-T150/PartnerForge`; everyone should re-point clones
   (`git remote set-url origin https://github.com/QUT-T150/PartnerForge.git`)
-  and Bruce should archive the old repo to stop accidental pushes.
+  and Bruce should archive the old repo to stop accidental pushes. *(Still outstanding
+  from week 4.)*
+- Analytics #20/#21 reassigned to Josh, who has the branch.

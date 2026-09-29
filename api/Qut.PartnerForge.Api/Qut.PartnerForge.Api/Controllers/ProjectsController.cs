@@ -342,7 +342,9 @@ public class ProjectsController : ControllerBase
             return query.Where(p => p.Organisation.SubmissionStatus == "approved");
         }
 
-        if (User.IsInRole("industry_partner") &&
+        if ((User.IsInRole("industry_partner") ||
+             User.IsInRole("industry_team") ||
+             User.IsInRole("industry_team_manager")) &&
             Guid.TryParse(User.FindFirstValue("organisation_id"), out var organisationId))
         {
             return query.Where(p => p.OrganisationId == organisationId);
