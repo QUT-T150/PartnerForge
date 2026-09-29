@@ -4,23 +4,25 @@ This document outlines the workflow, branching model, and code quality standards
 
 ## 1. Branching Model
 
-- `main`: Production branch. Protected. Direct commits and force pushes are disabled. All merges require at least 1 approved pull request review and passing CI.
-- `staging`: Integration testing branch. Protected. Merges require 1 review and passing CI.
-- Working branches: Branch off the latest `main` (or `staging` where applicable).
+- `main`: The only long-lived branch. Protected. Direct commits and force pushes are disabled. All merges require at least 1 approved pull request review and passing CI.
+- `staging` is retired (September 2026). Do not open pull requests against it; target `main` instead.
+- Working branches: branch off the latest `main`.
   - `feature/<name>`: New functionality
   - `fix/<name>`: Bug fixes
   - `devops/<name>`: CI/CD, build tools, or infrastructure changes
   - `chore/<name>`: Dependency updates or general maintenance
+  - `docs/<name>`: Documentation only
+  - Include the issue number where there is one, e.g. `feature/rate-limiting-auth-37`.
 
 ## 2. Branch Protection Rules
 
-The following rules apply to `main` and `staging`:
+The following rules apply to `main`:
 
 - **Pull Requests Required**: Direct pushes are disabled.
-- **Approvals**: At least 1 approving review from a team member is required before merging.
+- **Approvals**: At least 1 approving review from a team member other than the author is required before merging.
 - **Dismiss Stale Approvals**: New commits invalidate previous approvals, requiring re-review.
 - **Status Checks**: Automated CI checks (`frontend-ci` and `backend-ci`) must pass before merge.
-- **Branch Up to Date**: PR branches must be synced with target branch prior to merge.
+- **Branch Up to Date**: PR branches must be synced with `main` prior to merge. Merge `main` into your branch rather than rebasing a branch others have pulled.
 - **Force Pushes Disabled**: `git push --force` is blocked.
 - **Branch Deletions Disabled**: Branch deletion is blocked on protected branches.
 
@@ -54,9 +56,9 @@ Run these checks locally before opening a pull request:
 ### Frontend (Next.js)
 ```bash
 cd frontend
-npm test
-npm run type-check
-npm run build
+pnpm test
+pnpm run type-check
+pnpm run build
 ```
 
 ### Backend (.NET)
@@ -65,15 +67,22 @@ dotnet build api/Qut.PartnerForge.Api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.
 dotnet test api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj
 ```
 
-## 6. GitHub Ruleset Configuration (Admins)
+## 6. Issues and Project Board
+
+- Every piece of work has an issue on the GitHub Projects board. Columns: Backlog → Sprint → In Progress → In Review → Done.
+- Labels: one area label (`backend`, `frontend`, `database`, `docs`, `devops`, `security`, `testing`), a priority label where it matters, and `blocked: stakeholder input` when waiting on the client.
+- Sprints are GitHub milestones. At sprint planning, each person self-assigns the issues they will take; an issue must have an assignee before it moves into the Sprint column.
+- Use `Closes #<issue>` in the PR description so the issue closes when the PR merges to `main`.
+
+## 7. GitHub Ruleset Configuration (Admins)
 
 To configure branch protection via GitHub repository settings:
 
 1. Navigate to **Settings** > **Rules** > **Rulesets** (or **Branches** > **Branch protection rules**).
-2. Target branches: `main` and `staging`.
+2. Target branch: `main`.
 3. Enable:
    - Restrict deletions
    - Block force pushes
    - Require a pull request before merging (1 approval, dismiss stale approvals)
-   - Require status checks to pass (`frontend-ci`, `backend-ci`)
+   - Require status checks to pass (`frontend-ci`, `backend-ci`). Do not list the retired `build-and-test` check from the old `ci.yaml` workflow.
 4. Save ruleset.
