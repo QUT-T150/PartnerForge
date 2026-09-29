@@ -4,6 +4,8 @@ using Qut.PartnerForge.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace Qut.PartnerForge.Api.Tests;
 
@@ -20,7 +22,7 @@ public class AuditLogControllerTests
             .Cast<AuthorizeAttribute>()
             .Single();
 
-        Assert.Equal("admin", attribute.Roles);
+        Assert.Equal("admin,course_organiser", attribute.Roles);
     }
 
     [Fact]
@@ -28,6 +30,7 @@ public class AuditLogControllerTests
     {
         await using var context = await SeedContext();
         var controller = new AuditLogController(context);
+        SetUser(controller, "admin");
 
         var page = await Invoke(controller);
 
@@ -44,6 +47,7 @@ public class AuditLogControllerTests
     {
         await using var context = await SeedContext();
         var controller = new AuditLogController(context);
+        SetUser(controller, "admin");
 
         var byAction = await Invoke(controller, action: "SOFT_DELETE");
         Assert.All(byAction.Items, i => Assert.Equal("SOFT_DELETE", i.Action));
@@ -69,6 +73,7 @@ public class AuditLogControllerTests
     {
         await using var context = await SeedContext();
         var controller = new AuditLogController(context);
+        SetUser(controller, "admin");
 
         var firstPage = await Invoke(controller, page: 1, pageSize: 2);
         var thirdPage = await Invoke(controller, page: 3, pageSize: 2);
@@ -91,22 +96,41 @@ public class AuditLogControllerTests
         var tables = Assert.IsAssignableFrom<IEnumerable<string>>(ok.Value).ToList();
         Assert.Equal(new[] { "organisations", "projects", "users" }, tables);
     }
+    [Fact]
+public async Task GetAuditLog_CourseOrganiserWithoutRecordId_IsForbidden()
+{
+    await using var context = await SeedContext();
+    var controller = new AuditLogController(context);
+    SetUser(controller, "course_organiser");
+
+    var result = await controller.GetAuditLog(null, null, null, null, null, null, 1, 25);
+
+    Assert.IsType<ForbidResult>(result.Result);
+}
 
     private static async Task<AuditLogPageDto> Invoke(
         AuditLogController controller,
         string? action = null,
         string? tableName = null,
+        Guid? recordId = null,
         Guid? changedBy = null,
         DateTime? from = null,
         DateTime? to = null,
         int page = 1,
         int pageSize = 25)
     {
-        var result = await controller.GetAuditLog(action, tableName, changedBy, from, to, page, pageSize);
+        var result = await controller.GetAuditLog(action, tableName, recordId, changedBy, from, to, page, pageSize);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         return Assert.IsType<AuditLogPageDto>(ok.Value);
     }
-
+    private static void SetUser(AuditLogController controller, string role)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, role) }, "TestAuth");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
+    }
     private static async Task<ApplicationDbContext> SeedContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
