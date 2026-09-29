@@ -9,11 +9,13 @@ using System.Security.Claims;
 namespace Qut.PartnerForge.Api.Controllers;
 
 /// <summary>
-/// Admin-only user directory and account maintenance (roles, faculties, organisations, soft delete).
+/// User directory and account maintenance (roles, faculties, organisations, soft delete).
+/// Reads are open to admins and industry team managers (scoped to their own organisation);
+/// writes remain admin-only.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -37,6 +39,7 @@ public class UsersController : ControllerBase
     /// <param name="role">Exact role name (e.g. <c>admin</c>, <c>course_organiser</c>).</param>
     /// <param name="active">When set, filters by <see cref="User.IsActive"/>.</param>
     [HttpGet]
+    [Authorize(Roles = "admin,industry_team_manager")]
     public async Task<ActionResult<IEnumerable<UserListItemDto>>> GetUsers(
         [FromQuery] string? search,
         [FromQuery] string? role,
@@ -45,6 +48,8 @@ public class UsersController : ControllerBase
         var query = _context.Users
             .AsNoTracking()
             .Where(u => u.DeletedAt == null);
+
+        query = ApplyUserScope(query);
 
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(u => u.FullName.Contains(search) || u.Email.Contains(search));
@@ -80,10 +85,10 @@ public class UsersController : ControllerBase
     /// </summary>
     /// <param name="id">User identifier.</param>
     [HttpGet("{id}")]
+    [Authorize(Roles = "admin,industry_team_manager")]
     public async Task<ActionResult<UserListItemDto>> GetUser(Guid id)
     {
-        var user = await _context.Users
-            .AsNoTracking()
+        var user = await ApplyUserScope(_context.Users.AsNoTracking())
             .Where(u => u.DeletedAt == null && u.Id == id)
             .Select(u => new UserListItemDto(
                 u.Id,
@@ -108,6 +113,7 @@ public class UsersController : ControllerBase
     /// </summary>
     /// <param name="request">Account fields; password is required on creation.</param>
     [HttpPost]
+    [Authorize(Roles = "admin")]
     public async Task<ActionResult<UserListItemDto>> CreateUser(SaveUserRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Password))
@@ -151,6 +157,7 @@ public class UsersController : ControllerBase
     /// <param name="id">User identifier.</param>
     /// <param name="request">Replacement profile data.</param>
     [HttpPut("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> UpdateUser(Guid id, SaveUserRequest request)
     {
         var user = await _context.Users
@@ -192,6 +199,7 @@ public class UsersController : ControllerBase
     /// </summary>
     /// <param name="id">User identifier.</param>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         var user = await _context.Users
@@ -222,6 +230,23 @@ public class UsersController : ControllerBase
             return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// Admins see all users; industry team managers are scoped to their own organisation's members.
+    /// </summary>
+    private IQueryable<User> ApplyUserScope(IQueryable<User> query)
+    {
+        if (User.IsInRole("admin"))
+            return query;
+
+        if (User.IsInRole("industry_team_manager") &&
+            Guid.TryParse(User.FindFirstValue("organisation_id"), out var organisationId))
+        {
+            return query.Where(u => u.OrganisationId == organisationId);
+        }
+
+        return query.Where(_ => false);
     }
 
     /// <summary>
