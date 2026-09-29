@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { prettyRole } from "@/lib/permissions";
+import { getPermissions, prettyRole } from "@/lib/permissions";
 import "./header.css";
 
 interface HeaderProps {
@@ -30,6 +30,7 @@ export default function Header({ subtitle }: HeaderProps) {
   }
 
   const rolePretty = prettyRole(user.role);
+  const canViewUsers = getPermissions(user.role).users !== "no";
 
   return (
     <header className="site-header">
@@ -70,7 +71,7 @@ export default function Header({ subtitle }: HeaderProps) {
           >
             Applications
           </Link>
-          {user.role === "admin" && (
+          {canViewUsers && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management
             </Link>
