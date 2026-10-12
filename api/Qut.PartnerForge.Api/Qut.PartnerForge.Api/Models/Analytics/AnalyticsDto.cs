@@ -43,3 +43,13 @@ public record MostActivePartnerDto(
     string? Industry,
     int ProjectCount
 );
+
+/// <summary>Event dated today or later, with the number of partner organisations registered.</summary>
+public record UpcomingEventDto(
+    Guid Id,
+    string Name,
+    string? EventType,
+    DateOnly EventDate,
+    string? Location,
+    int OrganisationsAttending
+);

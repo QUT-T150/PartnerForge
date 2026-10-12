@@ -16,6 +16,7 @@ public class AnalyticsController : ControllerBase
 {
     private const int DefaultOrganisationLimit = 100;
     private const int DefaultPartnerLimit = 10;
+    private const int DefaultEventLimit = 5;
     private const int MaxLimit = 500;
 
     private readonly IAnalyticsService _analytics;
@@ -77,6 +78,19 @@ public class AnalyticsController : ControllerBase
     {
         var rows = await _analytics.GetMostActivePartnersAsync(
             Clamp(limit, DefaultPartnerLimit),
+            cancellationToken);
+
+        return Ok(rows);
+    }
+
+    /// <summary>Events dated today or later, soonest first. <c>limit</c> clamps to 1-500.</summary>
+    [HttpGet("upcoming-events")]
+    public async Task<ActionResult<IEnumerable<UpcomingEventDto>>> GetUpcomingEvents(
+        [FromQuery] int? limit,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _analytics.GetUpcomingEventsAsync(
+            Clamp(limit, DefaultEventLimit),
             cancellationToken);
 
         return Ok(rows);

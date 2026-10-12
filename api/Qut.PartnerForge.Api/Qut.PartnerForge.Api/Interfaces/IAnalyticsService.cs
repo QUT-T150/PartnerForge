@@ -28,6 +28,11 @@ public interface IAnalyticsService
     Task<IReadOnlyList<MostActivePartnerDto>> GetMostActivePartnersAsync(
         int limit,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Events dated today or later, soonest first.</summary>
+    Task<IReadOnlyList<UpcomingEventDto>> GetUpcomingEventsAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Accepted sort keys. Closed set, so caller input never reaches SQL as a column name.</summary>

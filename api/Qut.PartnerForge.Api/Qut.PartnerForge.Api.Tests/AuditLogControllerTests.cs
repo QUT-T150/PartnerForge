@@ -97,16 +97,16 @@ public class AuditLogControllerTests
         Assert.Equal(new[] { "organisations", "projects", "users" }, tables);
     }
     [Fact]
-public async Task GetAuditLog_CourseOrganiserWithoutRecordId_IsForbidden()
-{
-    await using var context = await SeedContext();
-    var controller = new AuditLogController(context);
-    SetUser(controller, "course_organiser");
+    public async Task GetAuditLog_CourseOrganiserWithoutRecordId_IsForbidden()
+    {
+        await using var context = await SeedContext();
+        var controller = new AuditLogController(context);
+        SetUser(controller, "course_organiser");
 
-    var result = await controller.GetAuditLog(null, null, null, null, null, null, 1, 25);
+        var result = await controller.GetAuditLog(null, null, null, null, null, null, 1, 25);
 
-    Assert.IsType<ForbidResult>(result.Result);
-}
+        Assert.IsType<ForbidResult>(result.Result);
+    }
 
     private static async Task<AuditLogPageDto> Invoke(
         AuditLogController controller,

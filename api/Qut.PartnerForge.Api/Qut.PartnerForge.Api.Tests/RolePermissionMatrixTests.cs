@@ -55,7 +55,7 @@ public class RolePermissionMatrixTests
         new object[] { typeof(AuthController), nameof(AuthController.Register), "admin" },
     };
 
-        [Theory]
+    [Theory]
     [MemberData(nameof(EndpointRoleMatrix))]
     public void Endpoint_HasExpectedAuthorizeRoles(Type controllerType, string methodName, string? expectedRoles)
     {

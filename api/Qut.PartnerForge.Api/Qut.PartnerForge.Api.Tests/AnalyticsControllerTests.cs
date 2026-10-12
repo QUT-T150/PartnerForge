@@ -201,6 +201,67 @@ public class AnalyticsControllerTests
         Assert.Equal(expected, AnalyticsSortKeys.Resolve(candidate));
     }
 
+    [Fact]
+    public async Task GetUpcomingEvents_UsesDefaultLimitWhenUnspecified()
+    {
+        var analytics = CreateUpcomingEventsService();
+        var controller = new AnalyticsController(analytics.Object);
+
+        await controller.GetUpcomingEvents(null, CancellationToken.None);
+
+        analytics.Verify(a => a.GetUpcomingEventsAsync(5, It.IsAny<CancellationToken>()));
+    }
+
+    [Fact]
+    public async Task GetUpcomingEvents_ClampsLimitToMaximum()
+    {
+        var analytics = CreateUpcomingEventsService();
+        var controller = new AnalyticsController(analytics.Object);
+
+        await controller.GetUpcomingEvents(9_999, CancellationToken.None);
+
+        analytics.Verify(a => a.GetUpcomingEventsAsync(500, It.IsAny<CancellationToken>()));
+    }
+
+    [Fact]
+    public async Task GetUpcomingEvents_ClampsNonPositiveLimitToOne()
+    {
+        var analytics = CreateUpcomingEventsService();
+        var controller = new AnalyticsController(analytics.Object);
+
+        await controller.GetUpcomingEvents(0, CancellationToken.None);
+
+        analytics.Verify(a => a.GetUpcomingEventsAsync(1, It.IsAny<CancellationToken>()));
+    }
+
+    [Fact]
+    public async Task GetUpcomingEvents_ReturnsOkWithServicePayload()
+    {
+        var expected = new List<UpcomingEventDto>
+        {
+            new(Guid.NewGuid(), "Industry Showcase", "showcase", new DateOnly(2026, 12, 1), "GP Campus", 4)
+        };
+        var analytics = new Mock<IAnalyticsService>();
+        analytics
+            .Setup(a => a.GetUpcomingEventsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+        var controller = new AnalyticsController(analytics.Object);
+
+        var response = await controller.GetUpcomingEvents(null, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(response.Result);
+        Assert.Same(expected, ok.Value);
+    }
+
+    private static Mock<IAnalyticsService> CreateUpcomingEventsService()
+    {
+        var analytics = new Mock<IAnalyticsService>();
+        analytics
+            .Setup(a => a.GetUpcomingEventsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UpcomingEventDto>());
+        return analytics;
+    }
+
     private static Mock<IAnalyticsService> CreateStatsService()
     {
         var analytics = new Mock<IAnalyticsService>();

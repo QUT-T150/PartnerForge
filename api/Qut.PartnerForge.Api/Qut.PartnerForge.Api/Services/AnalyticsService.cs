@@ -133,6 +133,28 @@ public class AnalyticsService : IAnalyticsService
             .ToList();
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<UpcomingEventDto>> GetUpcomingEventsAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+
+        return await _context.Events.AsNoTracking()
+            .Where(e => e.DeletedAt == null && e.EventDate >= today)
+            .OrderBy(e => e.EventDate)
+            .ThenBy(e => e.Name)
+            .Take(limit)
+            .Select(e => new UpcomingEventDto(
+                e.Id,
+                e.Name,
+                e.EventType,
+                e.EventDate,
+                e.Location,
+                e.Attendances.Count(a => a.DeletedAt == null)))
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>Applies a whitelisted sort key, defaulting to project count.</summary>
     private static IQueryable<OrganisationStat> ApplySort(
         IQueryable<OrganisationStat> query,
