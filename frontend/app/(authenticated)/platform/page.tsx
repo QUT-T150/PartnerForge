@@ -105,13 +105,9 @@ const FIELD_SETS: Record<string, FieldDef[]> = {
     ["secondaryItDiscipline", "Secondary IT discipline", "text", false],
     ["projectDeliverables", "Project deliverables", "textarea", false],
     ["projectPartnerAgreement", "Project partner agreement", "textarea", false],
-    [
-      "studentProjectAgreement",
-      "Student project agreement - IP licence/assignment",
-      "textarea",
-      false,
-    ],
+    ["studentProjectAgreement", "Student project agreement - IP licence/assignment", "textarea", false],
     ["ipAssignmentRationale", "Assignment of IP - rationale", "textarea", false],
+    ["notes", "Notes", "textarea", false],
   ],
   application: [
     ["proposedTitle", "Title of the proposed project", "text", true],

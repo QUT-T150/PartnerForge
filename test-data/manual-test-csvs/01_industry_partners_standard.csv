@@ -1,0 +1,9 @@
+Project_id,Registration ID,Organisation Name,Address,ABN,Industy Partner Contact Name(s),Position Title,Email,Phone,Partnership Status
+PRJ-2026-001,REG-2026-881,TechCorp Australia,"123 Innovation Way, Brisbane QLD 4000",12345678901,Sarah Jenkins,VP of Technology,s.jenkins@techcorp.com.au,0731234567,active
+PRJ-2026-002,REG-2026-882,DataSphere Solutions,"456 Analytics Blvd, Milton QLD 4064",23456789012,Marcus Vance,Head of Data Engineering,m.vance@datasphere.io,0732345678,active
+PRJ-2026-003,REG-2026-901,BioHealth Labs,"Suite 4, 78 Science Park, Fortitude Valley QLD 4006",34567890123,Dr. Elena Rostova,Director of Research,elena@biohealth.org,0733456789,prospect
+PRJ-2026-004,REG-2026-912,CyberGuard Defence,"Level 12, 100 Eagle Street, Brisbane City QLD 4000",45678901234,David O'Connor,CISO,d.oconnor@cyberguard.com,0734567890,active
+PRJ-2026-005,REG-2026-105,EcoGrid Energy,"99 Renewable Way, West End QLD 4101",56789012345,Aisha Khan,Sustainability Manager,aisha.khan@ecogrid.net,0735678901,completed
+PRJ-2026-006,REG-2026-199,Quantum Dynamics,"Building 3, 300 Physics Lane, St Lucia QLD 4067",67890123456,Robert Chen,Lead Quantum Architect,r.chen@quantumdynamics.org,0736789012,active
+PRJ-2026-007,REG-2026-301,AgriTech Robotics,"15 Farm Science Dr, Toowoomba QLD 4350",78901234567,Tom Gallagher,Field Systems Director,t.gallagher@agritech.com.au,0746123456,active
+PRJ-2026-008,REG-2026-388,FinTech Pioneers,"Suite 201, 200 Financial Row, Sydney NSW 2000, Australia",89012345678,Jessica Taylor,Chief Innovation Officer,jessica@fintechpioneers.com,0298765432,active
