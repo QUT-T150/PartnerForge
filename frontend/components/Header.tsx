@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { getPermissions, prettyRole, type Role } from "@/lib/permissions";
+import { IMPORT_EXPORT_HREF, canUseImportExport } from "@/lib/navigation";
 import "./header.css";
 
 interface HeaderProps {
@@ -27,6 +28,7 @@ export default function Header({ subtitle }: HeaderProps) {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
     if (target === "/analytics") return isOnAnalytics ? "active" : "";
     if (target === "/audit-log") return pathname === "/audit-log" ? "active" : "";
+    if (target === IMPORT_EXPORT_HREF) return pathname === IMPORT_EXPORT_HREF ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
   }
@@ -66,6 +68,13 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
+
+          {canUseImportExport(user.role as Role) && (
+            <Link href={IMPORT_EXPORT_HREF} className={navActive(IMPORT_EXPORT_HREF)}>
+              Import / Export
+            </Link>
+          )}
+
           {getPermissions(user.role as Role).analytics !== "no" && (
             <Link href="/analytics" className={navActive("/analytics")}>
               Analytics
