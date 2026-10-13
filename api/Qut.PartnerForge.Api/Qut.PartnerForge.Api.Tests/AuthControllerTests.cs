@@ -4,6 +4,7 @@ using Qut.PartnerForge.Api.Interfaces;
 using Qut.PartnerForge.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
 
 namespace Qut.PartnerForge.Api.Tests;
@@ -33,9 +34,11 @@ public class AuthControllerTests
         await context.SaveChangesAsync();
 
         var auth = new Mock<IAuthService>();
+        auth.Setup(a => a.GenerateRefreshToken()).Returns("raw-refresh-token");
+        auth.Setup(a => a.HashRefreshToken(It.IsAny<string>())).Returns<string>(t => $"hash:{t}");
         auth.Setup(a => a.VerifyPassword(TestPassword, user.PasswordHash)).Returns(true);
         auth.Setup(a => a.GenerateJwtToken(It.Is<User>(u => u.Id == user.Id))).Returns("jwt-token");
-        var controller = new AuthController(context, auth.Object);
+        var controller = new AuthController(context, auth.Object, CreateConfiguration());
 
         var response = await controller.Login(new LoginRequest(TestEmail, TestPassword));
 
@@ -45,6 +48,13 @@ public class AuthControllerTests
         Assert.Equal(TestEmail, body.Email);
         Assert.Equal("admin", body.Role);
         Assert.NotNull(user.LastLoginAt);
+        Assert.Equal("raw-refresh-token", body.RefreshToken);
+        Assert.Equal(15 * 60, body.ExpiresInSeconds);
+
+        // The raw token must not be what lands in the database.
+        var stored = await context.RefreshTokens.SingleAsync();
+        Assert.Equal("hash:raw-refresh-token", stored.TokenHash);
+        Assert.Null(stored.RevokedAt);
     }
 
     [Fact]
@@ -67,8 +77,10 @@ public class AuthControllerTests
         await context.SaveChangesAsync();
 
         var auth = new Mock<IAuthService>();
+        auth.Setup(a => a.GenerateRefreshToken()).Returns("raw-refresh-token");
+        auth.Setup(a => a.HashRefreshToken(It.IsAny<string>())).Returns<string>(t => $"hash:{t}");
         auth.Setup(a => a.VerifyPassword(TestPassword, user.PasswordHash)).Returns(false);
-        var controller = new AuthController(context, auth.Object);
+        var controller = new AuthController(context, auth.Object, CreateConfiguration());
 
         var response = await controller.Login(new LoginRequest(TestEmail, TestPassword));
 
@@ -92,7 +104,7 @@ public class AuthControllerTests
         });
         await context.SaveChangesAsync();
 
-        var controller = new AuthController(context, Mock.Of<IAuthService>());
+        var controller = new AuthController(context, Mock.Of<IAuthService>(), CreateConfiguration());
 
         var response = await controller.Register(new RegisterUserRequest(
             TestEmail,
@@ -108,7 +120,7 @@ public class AuthControllerTests
     public async Task Register_ReturnsBadRequest_WhenRoleDoesNotExist()
     {
         await using var context = CreateContext();
-        var controller = new AuthController(context, Mock.Of<IAuthService>());
+        var controller = new AuthController(context, Mock.Of<IAuthService>(), CreateConfiguration());
 
         var response = await controller.Register(new RegisterUserRequest(
             TestEmail,
@@ -129,9 +141,11 @@ public class AuthControllerTests
         await context.SaveChangesAsync();
 
         var auth = new Mock<IAuthService>();
+        auth.Setup(a => a.GenerateRefreshToken()).Returns("raw-refresh-token");
+        auth.Setup(a => a.HashRefreshToken(It.IsAny<string>())).Returns<string>(t => $"hash:{t}");
         auth.Setup(a => a.HashPassword(TestPassword)).Returns("hashed-password");
         auth.Setup(a => a.GenerateJwtToken(It.Is<User>(u => u.Email == TestEmail))).Returns("jwt-token");
-        var controller = new AuthController(context, auth.Object);
+        var controller = new AuthController(context, auth.Object, CreateConfiguration());
 
         var response = await controller.Register(new RegisterUserRequest(
             TestEmail,
@@ -150,6 +164,13 @@ public class AuthControllerTests
         Assert.Equal("hashed-password", savedUser.PasswordHash);
         Assert.True(savedUser.IsActive);
     }
+
+    private static IConfiguration CreateConfiguration() =>
+        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Jwt:ExpiryInMinutes"] = "15",
+            ["Jwt:RefreshTokenExpiryInDays"] = "14"
+        }).Build();
 
     private static ApplicationDbContext CreateContext()
     {

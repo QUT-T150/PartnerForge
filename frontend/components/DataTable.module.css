@@ -12,7 +12,11 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  /* Fixed layout makes the table respect the 100% width above instead of
+     always expanding to fit every column's longest unbroken line - long
+     values wrap within their cell instead of forcing horizontal scroll. */
+  table-layout: fixed;
 }
 
 .table th {
@@ -20,18 +24,58 @@
   color: #111827;
   font-weight: 700;
   text-align: left;
-  padding: 0.85rem;
+  padding: 0.65rem 0.6rem;
   border-bottom: 1px solid #e5e7eb;
+  /* Headers are short, terse labels - a mid-word wrap ("PROJEC"/"TS") reads
+     as broken UI, so headers stay on one line and truncate with an ellipsis
+     if the column is too narrow, instead of wrapping like body cells do. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Safari keeps a hidden per-cell minimum width based on content even
+     under table-layout: fixed, unless min-width is overridden - without
+     this the table still overflows in Safari even though Chromium-based
+     browsers correctly shrink/wrap it. */
+  min-width: 0;
 }
 
 .table td {
-  padding: 0.85rem;
+  padding: 0.65rem 0.6rem;
   border-bottom: 1px solid #edf0f3;
   color: #1f2937;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+/* The first column is always the record's own name/title - give it a bit
+   more room than an even split. The last column is always Actions
+   (short Edit/Delete buttons) - cap it instead of splitting evenly too. */
+.table th:first-child,
+.table td:first-child {
+  width: 16%;
+}
+
+.table th:last-child,
+.table td:last-child {
+  width: 5.5rem;
 }
 
 .table tbody tr:nth-child(even) {
   background: #fafafa;
+}
+
+/* "Jumped here from elsewhere" marker (see highlightRowId on DataTable) -
+   the [data-row-id] attribute selector isn't just decoration: it's what
+   pushes this above the zebra stripe rule above. A plain ".highlightRow"
+   class ties with ":nth-child(even)" on specificity (both are one
+   class-level selector plus two type selectors), so which one actually won
+   came down to source order in the compiled CSS - and on an even-indexed
+   highlighted row that lost, leaving it grey instead of blue. The extra
+   attribute selector (every highlighted row already carries data-row-id -
+   see DataTable.tsx) breaks the tie unconditionally. */
+.table tbody tr[data-row-id].highlightRow {
+  background: #dbeafe;
+  transition: background-color 0.4s ease-out;
 }
 
 .table tbody tr:hover {
@@ -74,6 +118,12 @@
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.expandedCell {
+  background: #f9fafb;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid #edf0f3;
 }
 
 .empty {

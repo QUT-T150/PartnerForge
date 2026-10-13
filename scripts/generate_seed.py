@@ -30,7 +30,7 @@ and re-seeding a database yields the same ids.
 
 Usage:  python3 scripts/generate_seed.py
 """
-import csv, pathlib, uuid
+import csv, pathlib, uuid, re, hashlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SAMPLES = ROOT / "test-data" / "csv-samples"
@@ -90,22 +90,79 @@ PROFILE = {
     "Oceanic Robotics":        (IND["Telecommunications"],  FAC["ENG"], 2026, 0, "prospect"),
 }
 
+# Some partners only appear in the events fixture, which carries no address/
+# ABN/phone - without this they'd show up in the app with a mostly-blank
+# profile. Synthesize a plausible, deterministic profile for those so every
+# organisation demos with a complete record, not just the ones from the
+# organisations fixture.
+IND_NAME = {v: k for k, v in IND.items()}
+
+def _dhash(key, mod):
+    return int(hashlib.md5(f"partnerforge:{key}".encode()).hexdigest(), 16) % mod
+
+_SUBURBS = [
+    ("123 Adelaide St", "Brisbane City", "QLD", "4000"),
+    ("45 Grey St", "South Brisbane", "QLD", "4101"),
+    ("8 Merivale St", "South Brisbane", "QLD", "4101"),
+    ("212 Margaret St", "Brisbane City", "QLD", "4000"),
+    ("77 Wickham Tce", "Spring Hill", "QLD", "4000"),
+    ("15 James St", "Fortitude Valley", "QLD", "4006"),
+    ("9 Cordelia St", "South Brisbane", "QLD", "4101"),
+    ("300 Ann St", "Brisbane City", "QLD", "4000"),
+    ("2 Water St", "Fortitude Valley", "QLD", "4006"),
+    ("58 Hardgrave Rd", "West End", "QLD", "4101"),
+]
+
+def _synth_abn(name):
+    return f"{_dhash('abn:' + name, 10**11):011d}"
+
+def _synth_phone(name):
+    return f"07{_dhash('phone:' + name, 10**8):08d}"
+
+def _synth_address(name):
+    return _SUBURBS[_dhash('addr:' + name, len(_SUBURBS))]
+
+def _synth_info(name, ind_id):
+    return f"{name} is an active QUT industry partner in the {IND_NAME.get(ind_id, 'Other')} sector."
+
+def _synth_notes(name):
+    return f"Primary liaison for {name} responds via email; no other engagement notes on file yet."
+
+def _extract_postcode(address):
+    if not address:
+        return None
+    m = re.search(r"(\d{4})\s*$", address.strip())
+    return m.group(1) if m else None
+
 # contact + address detail, keyed by organisation name
 DETAIL = {}
 for r in ORGS_CSV:
-    DETAIL[r["Organisation Name"].strip()] = dict(
-        address=r["Address"], abn=r["ABN"],
+    name = r["Organisation Name"].strip()
+    address = r["Address"]
+    DETAIL[name] = dict(
+        address=address, address2=None,
+        city="Brisbane", state="QLD", postcode=_extract_postcode(address),
+        abn=r["ABN"],
         contact=r["Industry Supervisor's Name"],
         title=r["Industry Supervisor's Position Title"],
         phone=r["Business Phone"], email=r["Business Email"],
-        info=r["Organisation Information"])
+        info=r["Organisation Information"],
+        notes=_synth_notes(name))
 for r in EVENTS_CSV:
     n = r["Organisation"].strip()
-    DETAIL.setdefault(n, dict(
-        address=None, abn=None,
+    if n in DETAIL:
+        continue
+    street, suburb, state, postcode = _synth_address(n)
+    ind_id = PROFILE[n][0] if n in PROFILE else None
+    DETAIL[n] = dict(
+        address=street, address2=None,
+        city=suburb, state=state, postcode=postcode,
+        abn=_synth_abn(n),
         contact=r["Best contact person to liaise with on this event"],
-        title=r["Position Title"], phone=None, email=r["Email"],
-        info=None))
+        title=r["Position Title"],
+        phone=_synth_phone(n), email=r["Email"],
+        info=_synth_info(n, ind_id),
+        notes=_synth_notes(n))
 
 SEM = ["S1", "S2", "SS"]
 PTYPE = ["capstone", "capstone", "capstone", "undergrad", "postgrad"]
@@ -182,12 +239,13 @@ for name, (ind, fac, first_year, n_proj, status) in PROFILE.items():
     d = DETAIL.get(name, {})
     reg = f"REG-{first_year}-{1000 + seq}"
     w(f"INSERT INTO organisations (id, registration_id, name, legal_name, abn, industry_id, "
-      f"website, phone, email, address_line1, city, state, country, organisation_information, "
-      f"partnership_status, submission_status, created_by, updated_by) VALUES")
+      f"website, phone, email, address_line1, address_line2, city, state, postcode, country, "
+      f"organisation_information, notes, partnership_status, submission_status, created_by, updated_by) VALUES")
     website = f"https://www.{name.lower().replace(' ', '').replace('.', '')}.com.au"
     w(f"  ({q(oid)}, {q(reg)}, {q(name)}, {q(name + ' Pty Ltd')}, {q(d.get('abn'))}, {ind}, "
-      f"{q(website)}, {q(d.get('phone'))}, {q(d.get('email'))}, {q(d.get('address'))}, "
-      f"{q('Brisbane')}, {q('QLD')}, {q('Australia')}, {q(d.get('info'))}, "
+      f"{q(website)}, {q(d.get('phone'))}, {q(d.get('email'))}, {q(d.get('address'))}, {q(d.get('address2'))}, "
+      f"{q(d.get('city', 'Brisbane'))}, {q(d.get('state', 'QLD'))}, {q(d.get('postcode'))}, {q('Australia')}, "
+      f"{q(d.get('info'))}, {q(d.get('notes'))}, "
       f"{q(status)}, 'approved', @admin, @admin);")
 w("")
 

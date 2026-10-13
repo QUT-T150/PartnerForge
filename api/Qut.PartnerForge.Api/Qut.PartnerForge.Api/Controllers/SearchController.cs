@@ -49,6 +49,10 @@ public class SearchController : ControllerBase
             ["title"] = nameof(Project.Title),
             ["project_type"] = nameof(Project.ProjectType),
             ["discipline_area"] = nameof(Project.DisciplineArea),
+            ["secondary_it_discipline"] = nameof(Project.SecondaryItDiscipline),
+            // Dotted paths are followed through navigation properties (see ResolvePropertyPath).
+            ["organisation"] = "Organisation.Name",
+            ["faculty"] = "Faculty.Name",
             ["semester"] = nameof(Project.Semester),
             ["year"] = nameof(Project.Year),
             ["status"] = nameof(Project.Status),
@@ -99,6 +103,20 @@ public class SearchController : ControllerBase
     };
 
     /// <summary>
+    /// Free-text fields whose filter options are built from the values actually stored in the
+    /// database (see <see cref="GetFields"/>), rather than a fixed whitelist of options.
+    /// </summary>
+    private static readonly Dictionary<string, string[]> DynamicOptionFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["organisations"] = ["city", "state", "country"],
+        ["projects"] = ["discipline_area", "secondary_it_discipline", "organisation", "faculty"],
+        ["events"] = ["event_type", "location"],
+    };
+
+    /// <summary>Upper bound on options returned for one dynamic field, to keep dropdowns usable.</summary>
+    private const int MaxDynamicOptions = 200;
+
+    /// <summary>
     /// Initializes a new instance of <see cref="SearchController"/>.
     /// </summary>
     /// <param name="context">Database context.</param>
@@ -117,14 +135,45 @@ public class SearchController : ControllerBase
     /// Returns the filterable field descriptors for an entity so the UI can render appropriate controls.
     /// </summary>
     /// <param name="entity">Entity name (<c>organisations</c>, <c>projects</c>, <c>events</c>).</param>
+    /// <remarks>
+    /// Free-text fields listed in <see cref="DynamicOptionFields"/> are returned as <c>select</c>
+    /// fields whose options are the distinct values currently stored (within the caller's
+    /// visibility scope), so a newly added record's value shows up as an exact-match filter
+    /// option straight away. If a field has no stored values yet it stays a plain text field.
+    /// </remarks>
     [HttpGet("fields/{entity}")]
-    public ActionResult<List<FilterableField>> GetFields(string entity)
+    public async Task<ActionResult<List<FilterableField>>> GetFields(string entity)
     {
         var fields = _fieldService.GetFields(entity);
         if (fields.Count == 0)
             return NotFound(new { message = $"Unknown entity '{entity}'." });
 
-        return Ok(fields);
+        if (!DynamicOptionFields.TryGetValue(entity, out var dynamicFields))
+            return Ok(fields);
+
+        var result = new List<FilterableField>(fields.Count);
+        foreach (var field in fields)
+        {
+            if (!dynamicFields.Contains(field.Field, StringComparer.OrdinalIgnoreCase))
+            {
+                result.Add(field);
+                continue;
+            }
+
+            var values = entity.ToLowerInvariant() switch
+            {
+                "organisations" => await GetDistinctValuesAsync(ApplyOrganisationScope(_context.Organisations), entity, field.Field),
+                "projects" => await GetDistinctValuesAsync(ApplyProjectScope(_context.Projects), entity, field.Field),
+                "events" => await GetDistinctValuesAsync(ApplyEventScope(_context.Events), entity, field.Field),
+                _ => new List<string>(),
+            };
+
+            result.Add(values.Count > 0
+                ? field with { Type = "select", Options = values.ToArray() }
+                : field);
+        }
+
+        return Ok(result);
     }
 
     // ──────────────────────────────────────────────
@@ -216,7 +265,9 @@ public class SearchController : ControllerBase
                         a.DeletedAt == null &&
                         a.ApplicationStatus == "pending" &&
                         a.ResultingProjectId == null),
-                    o.UpdatedAt
+                    o.UpdatedAt,
+                    o.Projects.Where(p => p.DeletedAt == null).Min(p => (int?)p.Year),
+                    o.Projects.Where(p => p.DeletedAt == null).Max(p => (int?)p.Year)
                 )),
             "projects" => await ExecuteSearch(
                 ApplyProjectScope(_context.Projects),
@@ -477,14 +528,10 @@ public class SearchController : ControllerBase
 
         foreach (var filter in filters)
         {
-            if (!propMap.TryGetValue(filter.Field, out var propName))
-                continue;
+            var resolved = ResolveFilterField(propMap, filter.Field, param, typeof(T));
+            if (resolved == null) continue;
 
-            var property = typeof(T).GetProperty(propName);
-            if (property == null) continue;
-
-            var propAccess = Expression.Property(param, property);
-            var propType = property.PropertyType;
+            var (propAccess, propType) = resolved.Value;
             var underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
 
             Expression predicate;
@@ -560,10 +607,10 @@ public class SearchController : ControllerBase
         string direction,
         ParameterExpression param)
     {
-        var property = typeof(T).GetProperty(propertyName);
-        if (property == null) return query;
+        var resolved = ResolvePropertyPath(param, typeof(T), propertyName);
+        if (resolved == null) return query;
 
-        var propAccess = Expression.Property(param, property);
+        var (propAccess, propType) = resolved.Value;
         var keySelector = Expression.Lambda(propAccess, param);
 
         var methodName = string.Equals(direction, "desc", StringComparison.OrdinalIgnoreCase)
@@ -572,7 +619,7 @@ public class SearchController : ControllerBase
 
         var method = typeof(Queryable).GetMethods()
             .First(m => m.Name == methodName && m.GetParameters().Length == 2)
-            .MakeGenericMethod(typeof(T), property.PropertyType);
+            .MakeGenericMethod(typeof(T), propType);
 
         return (IQueryable<T>)method.Invoke(null, [query, keySelector])!;
     }
@@ -694,11 +741,10 @@ public class SearchController : ControllerBase
 
         foreach (var filter in filters)
         {
-            if (!propMap.TryGetValue(filter.Field, out var propName)) continue;
-            var prop = elementType.GetProperty(propName);
-            if (prop == null) continue;
+            var resolved = ResolveFilterField(propMap, filter.Field, innerParam, elementType);
+            if (resolved == null) continue;
 
-            var predicate = BuildPropertyPredicate(Expression.Property(innerParam, prop), prop.PropertyType, filter);
+            var predicate = BuildPropertyPredicate(resolved.Value.Access, resolved.Value.Type, filter);
             body = body == null ? predicate : Expression.AndAlso(body, predicate);
         }
 
@@ -743,11 +789,10 @@ public class SearchController : ControllerBase
 
         foreach (var filter in filters)
         {
-            if (!propMap.TryGetValue(filter.Field, out var propName)) continue;
-            var prop = hopType.GetProperty(propName);
-            if (prop == null) continue;
+            var resolved = ResolveFilterField(propMap, filter.Field, hopAccess, hopType);
+            if (resolved == null) continue;
 
-            var predicate = BuildPropertyPredicate(Expression.Property(hopAccess, prop), prop.PropertyType, filter);
+            var predicate = BuildPropertyPredicate(resolved.Value.Access, resolved.Value.Type, filter);
             body = body == null ? predicate : Expression.AndAlso(body, predicate);
         }
 
@@ -778,11 +823,10 @@ public class SearchController : ControllerBase
 
         foreach (var filter in filters)
         {
-            if (!propMap.TryGetValue(filter.Field, out var propName)) continue;
-            var prop = relatedType.GetProperty(propName);
-            if (prop == null) continue;
+            var resolved = ResolveFilterField(propMap, filter.Field, navAccess, relatedType);
+            if (resolved == null) continue;
 
-            var predicate = BuildPropertyPredicate(Expression.Property(navAccess, prop), prop.PropertyType, filter);
+            var predicate = BuildPropertyPredicate(resolved.Value.Access, resolved.Value.Type, filter);
             body = body == null ? predicate : Expression.AndAlso(body, predicate);
         }
 
@@ -894,6 +938,119 @@ public class SearchController : ControllerBase
         }
 
         return query;
+    }
+
+    /// <summary>
+    /// Filterable fields that are calculated from related rows rather than stored columns,
+    /// keyed by entity CLR type. Each lambda is inlined into the query (EF Core turns it into a
+    /// correlated subquery), so these filter exactly like ordinary number fields.
+    /// </summary>
+    private static readonly Dictionary<Type, Dictionary<string, LambdaExpression>> ComputedFields = new()
+    {
+        [typeof(Organisation)] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // "Which partners do we work with most?"
+            ["project_count"] = (Expression<Func<Organisation, int>>)(o =>
+                o.Projects.Count(p => p.DeletedAt == null)),
+            // "How long have they been a partner?" (null when there are no projects)
+            ["first_project_year"] = (Expression<Func<Organisation, int?>>)(o =>
+                o.Projects.Where(p => p.DeletedAt == null).Min(p => (int?)p.Year)),
+            // "When did we last work with them?"
+            ["latest_project_year"] = (Expression<Func<Organisation, int?>>)(o =>
+                o.Projects.Where(p => p.DeletedAt == null).Max(p => (int?)p.Year)),
+            // Inclusive span, e.g. first 2019 + latest 2026 = 8 years.
+            ["years_partnered"] = (Expression<Func<Organisation, int?>>)(o =>
+                o.Projects.Where(p => p.DeletedAt == null).Max(p => (int?)p.Year)
+                - o.Projects.Where(p => p.DeletedAt == null).Min(p => (int?)p.Year)
+                + 1),
+        },
+    };
+
+    /// <summary>
+    /// Resolves a filter field on <paramref name="rootType"/> to an expression rooted at
+    /// <paramref name="root"/>: a computed field from <see cref="ComputedFields"/> if one exists,
+    /// otherwise the mapped (possibly dotted) property path. Returns null for unknown fields.
+    /// </summary>
+    private static (Expression Access, Type Type)? ResolveFilterField(
+        Dictionary<string, string> propMap,
+        string field,
+        Expression root,
+        Type rootType)
+    {
+        if (ComputedFields.TryGetValue(rootType, out var computed) &&
+            computed.TryGetValue(field, out var lambda))
+        {
+            var body = new ParameterReplacer(lambda.Parameters[0], root).Visit(lambda.Body)!;
+            return (body, lambda.ReturnType);
+        }
+
+        return propMap.TryGetValue(field, out var propName)
+            ? ResolvePropertyPath(root, rootType, propName)
+            : null;
+    }
+
+    /// <summary>Swaps one lambda parameter for another expression when inlining a lambda body.</summary>
+    private sealed class ParameterReplacer(ParameterExpression from, Expression to) : ExpressionVisitor
+    {
+        protected override Expression VisitParameter(ParameterExpression node) =>
+            node == from ? to : base.VisitParameter(node);
+    }
+
+    /// <summary>
+    /// Resolves a property name - or a dotted path through navigation properties such as
+    /// <c>Organisation.Name</c> - to a member-access expression and its CLR type.
+    /// EF Core translates the navigation hops into SQL joins. Returns null if any segment is unknown.
+    /// </summary>
+    private static (Expression Access, Type Type)? ResolvePropertyPath(Expression root, Type rootType, string path)
+    {
+        var access = root;
+        var type = rootType;
+        foreach (var segment in path.Split('.'))
+        {
+            var property = type.GetProperty(segment);
+            if (property == null) return null;
+            access = Expression.Property(access, property);
+            type = property.PropertyType;
+        }
+        return (access, type);
+    }
+
+    /// <summary>
+    /// Returns the distinct, non-empty values of a string field across non-deleted rows of the
+    /// (already scoped) query, sorted alphabetically.
+    /// </summary>
+    private static async Task<List<string>> GetDistinctValuesAsync<T>(
+        IQueryable<T> source,
+        string entity,
+        string field) where T : class
+    {
+        if (!FieldPropertyMaps.TryGetValue(entity, out var propMap) ||
+            !propMap.TryGetValue(field, out var propName))
+            return new List<string>();
+
+        var param = Expression.Parameter(typeof(T), "e");
+        var resolved = ResolvePropertyPath(param, typeof(T), propName);
+        if (resolved == null || resolved.Value.Type != typeof(string))
+            return new List<string>();
+
+        var deletedAtProp = typeof(T).GetProperty("DeletedAt")!;
+        var notDeleted = Expression.Lambda<Func<T, bool>>(
+            Expression.Equal(
+                Expression.Property(param, deletedAtProp),
+                Expression.Constant(null, deletedAtProp.PropertyType)),
+            param);
+        var selector = Expression.Lambda<Func<T, string?>>(resolved.Value.Access, param);
+
+        return await source
+            .AsNoTracking()
+            .Where(notDeleted)
+            .Select(selector)
+            .Where(v => v != null && v != "")
+            .Distinct()
+            .OrderBy(v => v)
+            .Take(MaxDynamicOptions)
+            .Select(v => v!)
+            .ToListAsync();
     }
 
     /// <summary>

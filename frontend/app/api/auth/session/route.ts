@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { ACCESS_COOKIE, refreshAccessToken } from "@/lib/auth-cookies";
 
-const COOKIE_NAME = "auth-token";
+const COOKIE_NAME = ACCESS_COOKIE;
 
 interface JwtPayload {
   [key: string]: unknown;
@@ -19,22 +20,30 @@ function decodeJwtPayload(token: string): JwtPayload | null {
   }
 }
 
+function isExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return true;
+  const exp = payload.exp as number | undefined;
+  return exp !== undefined && exp * 1000 < Date.now();
+}
+
 export async function GET() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  let token = cookieStore.get(COOKIE_NAME)?.value;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  // No access token, or an expired one, is recoverable while the refresh cookie
+  // is still good — that is the whole point of #39. Only a failed renewal is a
+  // real 401, and the client turns that into a redirect to /login.
+  if (!token || isExpired(token)) {
+    token = (await refreshAccessToken(cookieStore)) ?? undefined;
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
   }
 
   const payload = decodeJwtPayload(token);
   if (!payload) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  const exp = payload.exp as number | undefined;
-  if (exp && exp * 1000 < Date.now()) {
-    return NextResponse.json({ error: "Token expired" }, { status: 401 });
   }
 
   const role =

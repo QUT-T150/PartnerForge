@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 import { JOURNEY_STEPS, type JourneyStep } from "@/lib/navigation";
 import "./dashboard.css";
 
+
 const STEP_ICONS: Record<JourneyStep["key"], LucideIcon> = {
   partners: Building2,
   projects: ClipboardList,
@@ -21,6 +22,7 @@ const STEP_ICONS: Record<JourneyStep["key"], LucideIcon> = {
 
 // Deliberately minimal (#63): the header nav already exposes every other tool by role,
 // so the dashboard only offers the Partners -> Projects -> Events path.
+
 export default function DashboardPage() {
   const { user } = useAuth();
   if (!user) return null;
