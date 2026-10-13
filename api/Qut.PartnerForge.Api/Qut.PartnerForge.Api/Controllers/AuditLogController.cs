@@ -35,7 +35,7 @@ public class AuditLogController : ControllerBase
     /// </summary>
     /// <param name="action">Optional action filter (<c>INSERT</c>, <c>UPDATE</c>, <c>DELETE</c>, <c>SOFT_DELETE</c>, <c>RESTORE</c>).</param>
     /// <param name="tableName">Optional table filter.</param>
-    /// <param name="recordId">Optional single-record filter. Required for non-admin callers, who may only read one record's history.</param>
+    /// <param name="recordId">Optional single-record filter; required for non-admin callers, who may only view one record's history.</param>
     /// <param name="changedBy">Optional acting-user filter.</param>
     /// <param name="from">Optional inclusive lower bound on <c>changed_at</c> (UTC).</param>
     /// <param name="to">Optional inclusive upper bound on <c>changed_at</c> (UTC).</param>

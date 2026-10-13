@@ -66,12 +66,6 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
-          <Link
-            href="/platform?view=applications"
-            className={navActive("applications")}
-          >
-            Applications
-          </Link>
           {getPermissions(user.role as Role).analytics !== "no" && (
             <Link href="/analytics" className={navActive("/analytics")}>
               Analytics
