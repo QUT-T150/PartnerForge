@@ -78,6 +78,7 @@ public record OrganisationListItemDto(
     string? PrimaryContactPosition,
     string? PrimaryContactEmail,
     string? PrimaryContactPhone,
+    string? Notes,
     int ProjectCount,
     int PendingApplicationCount,
     DateTime UpdatedAt
@@ -129,6 +130,7 @@ public record ProjectListItemDto(
     string? ProjectPartnerAgreement,
     string? StudentProjectAgreement,
     string? IpAssignmentRationale,
+    string? Notes,
     DateTime UpdatedAt
 );
 
@@ -166,6 +168,7 @@ public record ProjectApplicationListItemDto(
     string? ProposedProjectType,
     string? ProposedSemester,
     int? ProposedYear,
+    int? ProposedFacultyId,
     string? ProposedFaculty,
     bool ProposedMultipleTeams,
     string? ProposedDisciplineArea,
@@ -205,6 +208,7 @@ public record EventListItemDto(
     string? Location,
     int? FacultyId,
     string? Faculty,
+    string? Notes,
     int AttendanceCount,
     DateTime UpdatedAt
 );
@@ -219,6 +223,21 @@ public record SaveEventRequest(
     int? FacultyId,
     string? Notes
 );
+
+/// <summary>Payload describing an event attendance / RSVP entry.</summary>
+public record SaveEventAttendanceRequest(
+    string? OrganisationName,
+    string? FirstName,
+    string? BestContactName,
+    string? PositionTitle,
+    string? Email,
+    string? ListName,
+    string? Source,
+    string? EventsInvitedTo,
+    string? Response,
+    string? Notes
+);
+
 
 /// <summary>Admin directory row for workforce accounts.</summary>
 public record UserListItemDto(

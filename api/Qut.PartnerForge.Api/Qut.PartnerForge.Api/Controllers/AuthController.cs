@@ -3,6 +3,7 @@ using Qut.PartnerForge.Api.Interfaces;
 using Qut.PartnerForge.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Qut.PartnerForge.Api.Controllers;
@@ -39,6 +40,7 @@ public class AuthController : ControllerBase
     /// <returns>An <see cref="AuthResponse"/> with a bearer token when credentials are valid.</returns>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("AuthLoginPolicy")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
         var user = await _context.Users
