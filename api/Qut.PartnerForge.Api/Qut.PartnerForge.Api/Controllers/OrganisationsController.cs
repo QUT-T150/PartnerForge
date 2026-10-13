@@ -105,6 +105,7 @@ public class OrganisationsController : ControllerBase
                     .Where(c => c.DeletedAt == null && c.IsPrimary)
                     .Select(c => c.Phone)
                     .FirstOrDefault(),
+                o.Notes,
                 o.Projects.Count(p => p.DeletedAt == null),
                 o.ProjectApplications.Count(a =>
                     a.DeletedAt == null &&
@@ -163,6 +164,7 @@ public class OrganisationsController : ControllerBase
                     .Where(c => c.DeletedAt == null && c.IsPrimary)
                     .Select(c => c.Phone)
                     .FirstOrDefault(),
+                o.Notes,
                 o.Projects.Count(p => p.DeletedAt == null),
                 o.ProjectApplications.Count(a =>
                     a.DeletedAt == null &&
@@ -214,6 +216,74 @@ public class OrganisationsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetOrganisation), new { id = org.Id }, new { id = org.Id });
+    }
+
+    /// <summary>
+    /// Bulk inserts organisation records in a single database transaction.
+    /// </summary>
+    /// <param name="requests">List of organisation payloads.</param>
+    [HttpPost("batch")]
+    [Authorize(Roles = "admin,course_organiser")]
+    public async Task<ActionResult<object>> CreateOrganisationsBatch([FromBody] IEnumerable<SaveOrganisationRequest> requests)
+    {
+        var orgs = new List<Organisation>();
+        var contacts = new List<Contact>();
+
+        foreach (var request in requests)
+        {
+            var orgId = Guid.NewGuid();
+            var org = new Organisation
+            {
+                Id = orgId,
+                RegistrationId = request.RegistrationId,
+                Name = request.Name,
+                Abn = request.Abn,
+                IndustryId = request.IndustryId,
+                Email = request.Email,
+                Website = request.Website,
+                Phone = request.Phone,
+                AddressLine1 = request.AddressLine1,
+                AddressLine2 = request.AddressLine2,
+                City = request.City,
+                State = request.State,
+                Postcode = request.Postcode,
+                Country = string.IsNullOrWhiteSpace(request.Country) ? "Australia" : request.Country,
+                OrganisationInformation = request.OrganisationInformation,
+                PartnershipStatus = string.IsNullOrWhiteSpace(request.PartnershipStatus) ? "prospect" : request.PartnershipStatus,
+                SubmissionStatus = "approved",
+                Notes = request.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            orgs.Add(org);
+
+            if (!string.IsNullOrWhiteSpace(request.PrimaryContactName) ||
+                !string.IsNullOrWhiteSpace(request.PrimaryContactEmail) ||
+                !string.IsNullOrWhiteSpace(request.PrimaryContactPhone) ||
+                !string.IsNullOrWhiteSpace(request.PrimaryContactPosition))
+            {
+                var (firstName, lastName) = SplitContactName(request.PrimaryContactName);
+                contacts.Add(new Contact
+                {
+                    Id = Guid.NewGuid(),
+                    OrganisationId = orgId,
+                    IsPrimary = true,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    JobTitle = request.PrimaryContactPosition,
+                    Email = request.PrimaryContactEmail,
+                    Phone = request.PrimaryContactPhone,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
+        _context.Organisations.AddRange(orgs);
+        _context.Contacts.AddRange(contacts);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { count = orgs.Count });
     }
 
     /// <summary>
