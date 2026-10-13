@@ -146,6 +146,12 @@
   border: 1px solid #bbf7d0;
 }
 
+.message.info {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
 .test-accounts {
   margin-top: 20px;
   padding: 14px;

@@ -1,3 +1,5 @@
+import { loginPath } from "./auth-redirect";
+
 export async function request<T = unknown>(
   path: string,
   options: RequestInit = {},
@@ -11,7 +13,8 @@ export async function request<T = unknown>(
   });
 
   if (response.status === 401) {
-    window.location.href = "/login";
+    const { pathname, search } = window.location;
+    window.location.href = loginPath({ reason: "expired", next: pathname + search });
     return null;
   }
 

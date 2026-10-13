@@ -34,6 +34,7 @@ export default function Header({ subtitle }: HeaderProps) {
   }
 
   const rolePretty = prettyRole(user.role);
+  const canViewUsers = getPermissions(user.role).users !== "no";
 
   return (
     <header className="site-header">
@@ -80,7 +81,7 @@ export default function Header({ subtitle }: HeaderProps) {
               Analytics
             </Link>
           )}
-          {user.role === "admin" && (
+          {canViewUsers && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management
             </Link>
