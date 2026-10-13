@@ -307,6 +307,46 @@ function PlatformContent() {
     ? copy.context
     : `${user?.fullName || "User"} (${prettyRole(role) || "signed in"}) can see records scoped by the API.`;
 
+  const isSingleView = effectiveView !== "all";
+
+  const singleEntityMeta: Record<
+    string,
+    { type: string; label: string; count: string; canAdd: boolean }
+  > = {
+    partners: {
+      type: "partner",
+      label: "Add Partner",
+      count: `${partnersTotal ?? partners.length} records`,
+      canAdd: canCreate(role, "partner"),
+    },
+    projects: {
+      type: "project",
+      label: "Add Project",
+      count: `${projectsTotal ?? projects.length} records`,
+      canAdd: canCreate(role, "project"),
+    },
+    applications: {
+      type: "application",
+      label: "Add Application",
+      count: `${filteredApplications.length} proposals`,
+      canAdd: canCreate(role, "application"),
+    },
+    events: {
+      type: "event",
+      label: "Add Event",
+      count: `${eventsTotal ?? events.length} records`,
+      canAdd: canCreate(role, "event"),
+    },
+    users: {
+      type: "user",
+      label: "Add User",
+      count: `${filteredUsers.length} accounts`,
+      canAdd: canCreate(role, "user"),
+    },
+  };
+
+  const currentMeta = isSingleView ? singleEntityMeta[effectiveView] : null;
+
   function isVisible(section: string) {
     return effectiveView === "all" || effectiveView === section;
   }
@@ -468,66 +508,86 @@ function PlatformContent() {
     <div className="platform-page">
       <div className="container">
         <div className="page-header">
-          <div className="category-label">{pageCategory}</div>
-          <h1 className="page-heading">{pageTitle}</h1>
-          <p className="page-subtitle">{pageContext}</p>
+          <div className="page-header-main">
+            <div className="category-label">{pageCategory}</div>
+            <div className="page-header-title-row">
+              <h1 className="page-heading">{pageTitle}</h1>
+              {currentMeta && (
+                <span className="section-badge">{currentMeta.count}</span>
+              )}
+            </div>
+            <p className="page-subtitle">{pageContext}</p>
+          </div>
+          {currentMeta && currentMeta.canAdd && (
+            <button
+              className="primary-btn"
+              onClick={() => openModal(currentMeta.type)}
+            >
+              <Plus size={15} strokeWidth={2} />
+              <span>{currentMeta.label}</span>
+            </button>
+          )}
         </div>
 
-        <div className="summary-grid">
-          {isVisible("partners") && (
-            <div className="summary-card">
-              <div className="summary-label">Industry Partners</div>
-              <div className="summary-value">{partnersTotal ?? partners.length}</div>
-            </div>
-          )}
-          {isVisible("projects") && (
-            <div className="summary-card">
-              <div className="summary-label">Projects</div>
-              <div className="summary-value">{projectsTotal ?? projects.length}</div>
-            </div>
-          )}
-          {isVisible("applications") && (
-            <div className="summary-card">
-              <div className="summary-label">Applications</div>
-              <div className="summary-value">
-                {filteredApplications.length}
+        {!isSingleView && (
+          <div className="summary-grid">
+            {isVisible("partners") && (
+              <div className="summary-card">
+                <div className="summary-label">Industry Partners</div>
+                <div className="summary-value">{partnersTotal ?? partners.length}</div>
               </div>
-            </div>
-          )}
-          {isVisible("events") && (
-            <div className="summary-card">
-              <div className="summary-label">Events</div>
-              <div className="summary-value">{eventsTotal ?? events.length}</div>
-            </div>
-          )}
-          {isVisible("users") && role === "admin" && (
-            <div className="summary-card">
-              <div className="summary-label">Users</div>
-              <div className="summary-value">{filteredUsers.length}</div>
-            </div>
-          )}
-        </div>
+            )}
+            {isVisible("projects") && (
+              <div className="summary-card">
+                <div className="summary-label">Projects</div>
+                <div className="summary-value">{projectsTotal ?? projects.length}</div>
+              </div>
+            )}
+            {isVisible("applications") && (
+              <div className="summary-card">
+                <div className="summary-label">Applications</div>
+                <div className="summary-value">
+                  {filteredApplications.length}
+                </div>
+              </div>
+            )}
+            {isVisible("events") && (
+              <div className="summary-card">
+                <div className="summary-label">Events</div>
+                <div className="summary-value">{eventsTotal ?? events.length}</div>
+              </div>
+            )}
+            {isVisible("users") && role === "admin" && (
+              <div className="summary-card">
+                <div className="summary-label">Users</div>
+                <div className="summary-value">{filteredUsers.length}</div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Partners Section */}
         {isVisible("partners") && (
           <section className="section">
-            <div className="section-header">
-              <div className="section-title-wrap">
-                <h2>Industry Partners</h2>
-                <span className="section-badge">
-                  {partnersTotal ?? partners.length} records
-                </span>
+            {!isSingleView && (
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <h2>Industry Partners</h2>
+                  <span className="section-badge">
+                    {partnersTotal ?? partners.length} records
+                  </span>
+                </div>
+                {canCreate(role, "partner") && (
+                  <button
+                    className="primary-btn"
+                    onClick={() => openModal("partner")}
+                  >
+                    <Plus size={15} strokeWidth={2} />
+                    <span>Add Partner</span>
+                  </button>
+                )}
               </div>
-              {canCreate(role, "partner") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("partner")}
-                >
-                  <Plus size={15} strokeWidth={2} />
-                  <span>Add Partner</span>
-                </button>
-              )}
-            </div>
+            )}
             <FilterBuilder
               entity="organisations"
               sortBy="name"
@@ -548,23 +608,25 @@ function PlatformContent() {
         {/* Projects Section */}
         {isVisible("projects") && (
           <section className="section">
-            <div className="section-header">
-              <div className="section-title-wrap">
-                <h2>Projects</h2>
-                <span className="section-badge">
-                  {projectsTotal ?? projects.length} records
-                </span>
+            {!isSingleView && (
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <h2>Projects</h2>
+                  <span className="section-badge">
+                    {projectsTotal ?? projects.length} records
+                  </span>
+                </div>
+                {canCreate(role, "project") && (
+                  <button
+                    className="primary-btn"
+                    onClick={() => openModal("project")}
+                  >
+                    <Plus size={15} strokeWidth={2} />
+                    <span>Add Project</span>
+                  </button>
+                )}
               </div>
-              {canCreate(role, "project") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("project")}
-                >
-                  <Plus size={15} strokeWidth={2} />
-                  <span>Add Project</span>
-                </button>
-              )}
-            </div>
+            )}
             <FilterBuilder
               entity="projects"
               sortBy="title"
@@ -585,23 +647,25 @@ function PlatformContent() {
         {/* Applications Section */}
         {isVisible("applications") && (
           <section className="section">
-            <div className="section-header">
-              <div className="section-title-wrap">
-                <h2>Project Applications</h2>
-                <span className="section-badge">
-                  {filteredApplications.length} proposals
-                </span>
+            {!isSingleView && (
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <h2>Project Applications</h2>
+                  <span className="section-badge">
+                    {filteredApplications.length} proposals
+                  </span>
+                </div>
+                {canCreate(role, "application") && (
+                  <button
+                    className="primary-btn"
+                    onClick={() => openModal("application")}
+                  >
+                    <Plus size={15} strokeWidth={2} />
+                    <span>Add Application</span>
+                  </button>
+                )}
               </div>
-              {canCreate(role, "application") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("application")}
-                >
-                  <Plus size={15} strokeWidth={2} />
-                  <span>Add Application</span>
-                </button>
-              )}
-            </div>
+            )}
             <div className="section-tools">
               <div className="search-input-wrap">
                 <Search size={14} className="search-icon" />
@@ -653,23 +717,25 @@ function PlatformContent() {
         {/* Events Section */}
         {isVisible("events") && (
           <section className="section">
-            <div className="section-header">
-              <div className="section-title-wrap">
-                <h2>Events</h2>
-                <span className="section-badge">
-                  {eventsTotal ?? events.length} records
-                </span>
+            {!isSingleView && (
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <h2>Events</h2>
+                  <span className="section-badge">
+                    {eventsTotal ?? events.length} records
+                  </span>
+                </div>
+                {canCreate(role, "event") && (
+                  <button
+                    className="primary-btn"
+                    onClick={() => openModal("event")}
+                  >
+                    <Plus size={15} strokeWidth={2} />
+                    <span>Add Event</span>
+                  </button>
+                )}
               </div>
-              {canCreate(role, "event") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("event")}
-                >
-                  <Plus size={15} strokeWidth={2} />
-                  <span>Add Event</span>
-                </button>
-              )}
-            </div>
+            )}
             <FilterBuilder
               entity="events"
               sortBy="event_date"
@@ -690,23 +756,25 @@ function PlatformContent() {
         {/* Users Section (admin only) */}
         {isVisible("users") && role === "admin" && (
           <section className="section">
-            <div className="section-header">
-              <div className="section-title-wrap">
-                <h2>User Management</h2>
-                <span className="section-badge">
-                  {filteredUsers.length} accounts
-                </span>
+            {!isSingleView && (
+              <div className="section-header">
+                <div className="section-title-wrap">
+                  <h2>User Management</h2>
+                  <span className="section-badge">
+                    {filteredUsers.length} accounts
+                  </span>
+                </div>
+                {canCreate(role, "user") && (
+                  <button
+                    className="primary-btn"
+                    onClick={() => openModal("user")}
+                  >
+                    <Plus size={15} strokeWidth={2} />
+                    <span>Add User</span>
+                  </button>
+                )}
               </div>
-              {canCreate(role, "user") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("user")}
-                >
-                  <Plus size={15} strokeWidth={2} />
-                  <span>Add User</span>
-                </button>
-              )}
-            </div>
+            )}
             <div className="section-tools">
               <div className="search-input-wrap">
                 <Search size={14} className="search-icon" />
