@@ -58,6 +58,9 @@ public class ApplicationDbContext : DbContext
     /// <summary>User-owned named filter presets stored as JSON.</summary>
     public DbSet<SavedFilter> SavedFilters { get; set; }
 
+    /// <summary>Hashed, single-use refresh tokens backing session renewal.</summary>
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
+
     /// <summary>Read-only per-organisation rollup from the <c>v_organisation_stats</c> view.</summary>
     public DbSet<OrganisationStat> OrganisationStats { get; set; }
 
@@ -177,6 +180,20 @@ public class ApplicationDbContext : DbContext
         // SavedFilter — filters column stored as JSON
         modelBuilder.Entity<SavedFilter>()
             .Property(sf => sf.Filters).HasColumnType("json");
+
+        // RefreshToken — hash is the lookup key on presentation, so it must be unique.
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.User)
+            .WithMany()
+            .HasForeignKey(rt => rt.UserId);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.TokenHash)
+            .IsUnique();
+
+        // IsActive is derived from RevokedAt/ExpiresAt; it is not a column.
+        modelBuilder.Entity<RefreshToken>()
+            .Ignore(rt => rt.IsActive);
 
         // AuditLog — JSON columns for old/new row snapshots
         modelBuilder.Entity<AuditLog>()

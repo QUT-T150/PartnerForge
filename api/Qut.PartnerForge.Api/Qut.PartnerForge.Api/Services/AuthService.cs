@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Qut.PartnerForge.Api.Services;
 
@@ -64,4 +65,19 @@ public class AuthService : IAuthService
     /// <inheritdoc />
     public bool VerifyPassword(string password, string hash) =>
         BCrypt.Net.BCrypt.Verify(password, hash);
+
+    /// <inheritdoc />
+    public string GenerateRefreshToken() =>
+        Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+
+    /// <inheritdoc />
+    public string HashRefreshToken(string rawToken) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawToken))).ToLowerInvariant();
+
+    /// <summary>
+    /// Base64 without padding and using the URL-safe alphabet, so the token survives being
+    /// carried in a cookie or query string without escaping.
+    /// </summary>
+    private static string Base64UrlEncode(byte[] bytes) =>
+        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
