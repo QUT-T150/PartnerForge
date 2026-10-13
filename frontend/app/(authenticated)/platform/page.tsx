@@ -19,6 +19,7 @@ import DataTable, {
 } from "@/components/DataTable";
 import FilterBuilder from "@/components/FilterBuilder";
 import RecordModal, { type FieldDef } from "@/components/RecordModal";
+import ConfirmModal from "@/components/ConfirmModal";
 import "./platform.css";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -331,11 +332,27 @@ function PlatformContent() {
     await loadData();
   }
 
-  async function handleDelete(type: EntityType, id: string) {
-    if (!confirm("Move this record to deleted records?")) return;
-    const path = API_PATHS[type];
-    await request(`${path}/${id}`, { method: "DELETE" });
-    await loadData();
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: EntityType;
+    id: string;
+    name?: string;
+  } | null>(null);
+
+  function requestDelete(type: EntityType, id: string, name?: string) {
+    setDeleteTarget({ type, id, name });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const path = API_PATHS[deleteTarget.type];
+    try {
+      await request(`${path}/${deleteTarget.id}`, { method: "DELETE" });
+      await loadData();
+    } catch (err) {
+      console.error("Delete failed", err);
+    } finally {
+      setDeleteTarget(null);
+    }
   }
 
   function ActionButtons({ type, id }: { type: EntityType; id: string }) {
@@ -362,7 +379,14 @@ function PlatformContent() {
         {canDelete(role, type) && (
           <button
             className="action-btn delete-btn"
-            onClick={() => handleDelete(type, id)}
+            onClick={() => {
+              const record = collections[type]?.find((r: any) => r.id === id);
+              requestDelete(
+                type,
+                id,
+                record?.name || record?.title || record?.fullName || record?.proposedTitle,
+              );
+            }}
           >
             Delete
           </button>
@@ -696,6 +720,20 @@ function PlatformContent() {
           onSubmit={handleSave}
         />
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title={`Delete ${deleteTarget ? deleteTarget.type.charAt(0).toUpperCase() + deleteTarget.type.slice(1) : "Record"}`}
+        message={
+          deleteTarget?.name
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This action will remove or archive the record.`
+            : "Are you sure you want to delete this record? This action will remove or archive the record."
+        }
+        confirmText="Delete Record"
+        destructive={true}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

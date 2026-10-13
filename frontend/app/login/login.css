@@ -156,50 +156,49 @@
   border: 1px solid #BBF7D0;
 }
 
-.test-accounts {
+.demo-pills-wrap {
   margin-top: 20px;
-  padding: 12px;
+  padding: 12px 14px;
   background: var(--color-subtle, #F8F8F6);
   border: 1px solid var(--color-border, #E8E8E5);
-  border-radius: var(--card-radius, 4px);
-  font-size: 11px;
-  color: var(--color-text-mid, #555555);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.test-accounts strong {
+.demo-label {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #002C5F;
-  display: block;
-  margin-bottom: 8px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #999999);
+  white-space: nowrap;
 }
 
-.test-accounts code {
+.demo-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.demo-pill {
+  padding: 4px 10px;
   background: #FFFFFF;
   border: 1px solid var(--color-border, #E8E8E5);
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-text-primary, #111111);
-}
-
-.test-account-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 6px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: #002C5F;
   cursor: pointer;
-  border-radius: 2px;
-  transition: background-color 0.15s ease;
-  font-family: var(--font-mono);
-  font-size: 10px;
+  transition: all 0.12s ease;
 }
 
-.test-account-row:hover {
-  background: #EAEAEA;
+.demo-pill:hover {
+  background: #002C5F;
+  color: #FFFFFF;
+  border-color: #002C5F;
 }
 
 .footer {

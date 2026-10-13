@@ -124,18 +124,20 @@ export default function LoginPage() {
           )}
         </form>
 
-        <div className="test-accounts">
-          <strong>Test accounts (click to autofill)</strong>
-          {TEST_ACCOUNTS.map((account) => (
-            <div
-              key={account.email}
-              className="test-account-row"
-              onClick={() => autofill(account)}
-            >
-              <span>{account.label}</span>
-              <code>{account.email}</code>
-            </div>
-          ))}
+        <div className="demo-pills-wrap">
+          <span className="demo-label">Demo Quick-Fill</span>
+          <div className="demo-pills">
+            {TEST_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                className="demo-pill"
+                onClick={() => autofill(account)}
+              >
+                {account.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <p className="footer">

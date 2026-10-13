@@ -16,8 +16,8 @@ function LoadingSkeleton() {
       {/* Sidebar Skeleton */}
       <div
         style={{
-          width: 200,
-          minWidth: 200,
+          width: 220,
+          minWidth: 220,
           background: "var(--color-sidebar, #001C3D)",
           display: "flex",
           flexDirection: "column",
