@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { loginPath } from "@/lib/auth-redirect";
 
 const COOKIE_NAME = "auth-token";
+const REFRESH_COOKIE_NAME = "refresh-token";
 const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 
 // Routes only some roles may open. The API still enforces access; this just
@@ -36,9 +37,18 @@ function roleOf(token: string): string {
 
 export function middleware(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value;
+  const refreshToken = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
   const { pathname, search } = req.nextUrl;
 
   if (!token || isTokenExpired(token)) {
+    // Middleware runs on the edge and cannot call the API, so it does not refresh
+    // here. A usable refresh cookie means the session is very likely renewable, so
+    // let the request through: /api/auth/session and the proxy both renew on demand
+    // and will 401 for real if the refresh token turns out to be spent.
+    if (refreshToken) {
+      return NextResponse.next();
+    }
+
     const loginUrl = new URL(
       loginPath({ reason: token ? "expired" : undefined, next: pathname + search }),
       req.url,

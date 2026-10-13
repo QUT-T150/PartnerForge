@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createSavedFilter,
   deleteSavedFilter,
@@ -25,6 +25,22 @@ interface FilterBuilderProps<T = Record<string, unknown>> {
   pageSize?: number;
   sortBy?: string | null;
   sortDirection?: "asc" | "desc";
+  // Lets a caller drive which page is loaded from outside the filter UI -
+  // e.g. jumping straight to the page that contains a specific record so it
+  // can be highlighted (see highlightProjectId/highlightPartnerId in
+  // page.tsx), or a DataTable Previous/Next click. Defaults to page 1 and
+  // is otherwise ignored if never passed - existing callers are unaffected.
+  page?: number;
+  // Called whenever the page actually loaded changes - either because
+  // `page` changed, or because an internal action (Apply/Clear/restoring a
+  // saved filter) reset back to page 1 - so the caller's own page state
+  // (and anything driven by it, like a DataTable pager) stays in sync.
+  onPageChange?: (page: number) => void;
+  // Bump this after the caller adds/edits/deletes a record. The filter field
+  // options are reloaded (so dynamic dropdowns such as Discipline Area pick
+  // up newly stored values) and the current search re-runs on the current
+  // page, keeping the table consistent with the active filters.
+  refreshKey?: number;
 }
 
 interface FilterRow {
@@ -94,6 +110,11 @@ function toRelatedFilterGroups(groups: RelatedGroup[]): RelatedFilterGroup[] {
       filters: toValidFilters(g.rows),
     }));
 }
+// Stable identity for "which conditions are applied" (page excluded), so the
+// auto-apply effect can tell a real change from one that was already searched.
+function queryKey(filters: FilterItem[], related: RelatedFilterGroup[]): string {
+  return JSON.stringify({ filters, related });
+}
 
 export default function FilterBuilder<T = Record<string, unknown>>({
   entity,
@@ -102,7 +123,14 @@ export default function FilterBuilder<T = Record<string, unknown>>({
   pageSize = 25,
   sortBy = null,
   sortDirection = "asc",
+  page,
+  onPageChange,
+  refreshKey,
 }: FilterBuilderProps<T>) {
+  // Tracks the page we last actually searched, so the page-sync effect
+  // below can tell "the page prop changed" apart from "this is the same
+  // initial value the mount effect already fetched".
+  const lastSearchedPageRef = useRef(page ?? 1);
   const [fields, setFields] = useState<FilterableField[]>([]);
   const [relationships, setRelationships] = useState<
     RelationshipDescriptor[]
@@ -133,6 +161,11 @@ export default function FilterBuilder<T = Record<string, unknown>>({
     (filter) => filter.id === selectedSavedFilterId,
   );
 
+  // Conditions of the most recent search, and a counter so a slow earlier
+  // response can't overwrite a newer one while the user is still typing.
+  const lastQueryKeyRef = useRef(queryKey([], []));
+  const searchSeqRef = useRef(0);
+
   const runSearch = useCallback(
     async (
       filters: FilterItem[],
@@ -148,21 +181,45 @@ export default function FilterBuilder<T = Record<string, unknown>>({
         pageSize,
       };
 
+      lastQueryKeyRef.current = queryKey(filters, related);
+      const seq = ++searchSeqRef.current;
+
       setLoading(true);
       setError(null);
       onRequestChange?.(request);
 
       try {
         const results = await searchEntity<T>(entity, request);
+        if (seq !== searchSeqRef.current) return null; // a newer search superseded this one
         onResults(results);
+        return results;
       } catch (err) {
+        if (seq !== searchSeqRef.current) return null;
         setError(err instanceof Error ? err.message : "Search failed.");
+        return null;
       } finally {
-        setLoading(false);
+        if (seq === searchSeqRef.current) setLoading(false);
       }
     },
     [entity, onRequestChange, onResults, pageSize, sortBy, sortDirection],
   );
+
+  // Auto-apply: re-run the search ~400ms after the user stops editing a
+  // condition, so typing in a value filters the table without pressing
+  // "Apply filters". Rows with no field or an empty value are ignored (see
+  // toValidFilters), so half-built conditions don't trigger a search, and
+  // anything already searched (Apply, Clear, a saved filter, the initial
+  // load) is skipped via lastQueryKeyRef.
+  useEffect(() => {
+    if (queryKey(activeFilters, activeRelated) === lastQueryKeyRef.current) return;
+    const timer = setTimeout(() => {
+      lastSearchedPageRef.current = 1;
+      onPageChange?.(1);
+      runSearch(activeFilters, activeRelated, 1);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilters, activeRelated]);
 
   const refreshSavedFilters = useCallback(async () => {
     const saved = await fetchSavedFilters(entity);
@@ -187,7 +244,7 @@ export default function FilterBuilder<T = Record<string, unknown>>({
         setFields(fieldResults);
         setSavedFilters(savedResults);
         setRelationships(relResults);
-        await runSearch([], [], 1);
+        await runSearch([], [], page ?? 1);
       } catch (err) {
         if (active) {
           setError(
@@ -204,7 +261,75 @@ export default function FilterBuilder<T = Record<string, unknown>>({
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, runSearch]);
+
+  // Lets an external page change (e.g. a DataTable Previous/Next click, or a
+  // caller jumping to a specific page) reload without going through Apply.
+  // Guarded against the initial render, which the mount effect above
+  // already fetched at this same page.
+  useEffect(() => {
+    if (page == null || page === lastSearchedPageRef.current) return;
+    lastSearchedPageRef.current = page;
+    runSearch(activeFilters, activeRelated, page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  // Caller data changed (see refreshKey): re-run the current search where
+  // the user is, and reload field options for the root entity and any
+  // related-table groups so newly stored values appear as filter choices.
+  const lastRefreshKeyRef = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey === lastRefreshKeyRef.current) return;
+    lastRefreshKeyRef.current = refreshKey;
+    let active = true;
+
+    async function refresh() {
+      const currentPage = lastSearchedPageRef.current;
+      const results = await runSearch(activeFilters, activeRelated, currentPage);
+      // Deleting the only row on the last page would leave an empty page -
+      // step back to the new last page instead.
+      if (active && results && results.items.length === 0 && results.total > 0 && currentPage > 1) {
+        const lastPage = Math.ceil(results.total / pageSize);
+        lastSearchedPageRef.current = lastPage;
+        onPageChange?.(lastPage);
+        await runSearch(activeFilters, activeRelated, lastPage);
+      }
+    }
+
+    async function reloadFieldOptions() {
+      try {
+        const fieldResults = await fetchFilterableFields(entity);
+        if (active) setFields(fieldResults);
+      } catch {
+        /* keep the options already loaded */
+      }
+      const groups = relatedGroups.filter((g) => g.entity);
+      const refreshed = await Promise.all(
+        groups.map(async (g) => {
+          try {
+            return { id: g.id, fields: await fetchFilterableFields(g.entity) };
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (!active) return;
+      setRelatedGroups((current) =>
+        current.map((g) => {
+          const hit = refreshed.find((r) => r?.id === g.id);
+          return hit ? { ...g, fields: hit.fields } : g;
+        }),
+      );
+    }
+
+    refresh();
+    reloadFieldOptions();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   // ── Direct filter row helpers ──
 
@@ -315,6 +440,8 @@ export default function FilterBuilder<T = Record<string, unknown>>({
   // ── Actions ──
 
   async function handleApply() {
+    lastSearchedPageRef.current = 1;
+    onPageChange?.(1);
     await runSearch(activeFilters, toRelatedFilterGroups(relatedGroups), 1);
   }
 
@@ -322,6 +449,8 @@ export default function FilterBuilder<T = Record<string, unknown>>({
     setRows([]);
     setRelatedGroups([]);
     setSelectedSavedFilterId("");
+    lastSearchedPageRef.current = 1;
+    onPageChange?.(1);
     await runSearch([], [], 1);
   }
 
@@ -394,6 +523,8 @@ export default function FilterBuilder<T = Record<string, unknown>>({
       }
       setRelatedGroups(restoredGroups);
 
+      lastSearchedPageRef.current = 1;
+      onPageChange?.(1);
       await runSearch(directFilters, related, 1);
     } catch {
       setError("Saved filter could not be parsed.");

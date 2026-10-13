@@ -33,13 +33,23 @@ public record RegisterUserRequest(
 /// <param name="Role">Authorisation role copied from <see cref="Role.Name"/>.</param>
 /// <param name="FacultyId">Optional faculty routing for scoped queries.</param>
 /// <param name="OrganisationId">Optional owning organisation when the user is an industry partner.</param>
+/// <param name="RefreshToken">Single-use token for renewing <paramref name="Token"/> without re-entering credentials.</param>
+/// <param name="ExpiresInSeconds">Lifetime of <paramref name="Token"/>, so the caller can refresh before it lapses.</param>
 public record AuthResponse(
     string Token,
     string Email,
     string FullName,
     string Role,
     int? FacultyId,
-    Guid? OrganisationId
+    Guid? OrganisationId,
+    string RefreshToken,
+    int ExpiresInSeconds
+);
+
+/// <summary>Presents a refresh token in exchange for a new access token.</summary>
+/// <param name="RefreshToken">The raw token issued by a previous login or refresh.</param>
+public record RefreshRequest(
+    string RefreshToken
 );
 
 // Read-only list DTOs
@@ -71,7 +81,11 @@ public record OrganisationListItemDto(
     string? Notes,
     int ProjectCount,
     int PendingApplicationCount,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    // Year of the organisation's earliest / most recent (non-deleted) project;
+    // null when it has no projects. Answers partnership longevity and recency.
+    int? FirstProjectYear,
+    int? LatestProjectYear
 );
 
 /// <summary>Payload for organisation create/update controllers.</summary>

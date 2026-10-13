@@ -44,6 +44,13 @@ services:
       - Jwt__ExpiryInMinutes=60
       # JWT keys are loaded from appsettings.json in dev.
       # In production, override Jwt__PrivateKeyPem and Jwt__PublicKeyPem via environment or Docker secrets.
+    # Healthy once the API answers and can reach MySQL (see HealthChecks/DatabaseHealthCheck.cs)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     networks:
       - qpf-network
 
@@ -72,10 +79,17 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - BACKEND_URL=http://api:8080
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
     networks:
       - qpf-network
 
