@@ -20,5 +20,9 @@ export async function request<T = unknown>(
   }
 
   if (response.status === 204) return null;
-  return response.json() as Promise<T>;
+  const contentType = response.headers.get("content-type");
+  if (contentType?.includes("application/json")) {
+    return response.json() as Promise<T>;
+  }
+  return null;
 }

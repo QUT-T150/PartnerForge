@@ -33,24 +33,46 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data: { fullName?: string; error?: string } | null = null;
+      const isJson = res.headers.get("content-type")?.includes("application/json");
+
+      if (isJson) {
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || `Login failed (HTTP ${res.status}).`);
+        const errorText =
+          data?.error ||
+          (res.status === 404
+            ? "Authentication endpoint not found. Please verify the server is running on the correct port."
+            : res.status === 502 || res.status === 503
+            ? "Backend API service is unavailable. Please verify the backend API is online."
+            : `Login failed (HTTP ${res.status}).`);
+        throw new Error(errorText);
+      }
+
+      if (!data) {
+        throw new Error("Invalid response received from authentication service.");
       }
 
       setMessage({
         type: "success",
-        text: `Welcome, ${data.fullName}. Redirecting...`,
+        text: `Welcome, ${data.fullName || "User"}. Redirecting...`,
       });
 
       setTimeout(() => router.push("/dashboard"), 600);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred.";
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during sign in.";
       setMessage({
         type: "error",
-        text: errorMessage + " Is the API running on port 8080?",
+        text: errorMessage,
       });
     } finally {
       setSubmitting(false);
