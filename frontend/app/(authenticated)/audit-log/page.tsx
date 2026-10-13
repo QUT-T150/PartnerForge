@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronDown, ChevronRight, RefreshCw, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { request } from "@/lib/api";
 import "./audit-log.css";
@@ -60,6 +61,13 @@ function filterQuery(filters: Filters, page: number, pageSize: number): string {
   return params.toString();
 }
 
+function formatSnapshotVal(val: unknown): string {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "string") return val;
+  if (typeof val === "boolean") return val ? "true" : "false";
+  return JSON.stringify(val);
+}
+
 /** Renders a field-by-field before/after comparison of the JSON snapshots. */
 function DiffView({ entry }: { entry: AuditEntry }) {
   const parse = (json: string | null): Record<string, unknown> => {
@@ -77,11 +85,8 @@ function DiffView({ entry }: { entry: AuditEntry }) {
     new Set([...Object.keys(oldValues), ...Object.keys(newValues)]),
   ).sort();
 
-  const show = (values: Record<string, unknown>, key: string) =>
-    key in values ? JSON.stringify(values[key]) : "—";
-
   if (keys.length === 0) {
-    return <p className="diff-empty">No value snapshots on this event.</p>;
+    return <p className="diff-empty">No value snapshots recorded for this event.</p>;
   }
 
   return (
@@ -89,31 +94,66 @@ function DiffView({ entry }: { entry: AuditEntry }) {
       <table className="diff-table">
         <thead>
           <tr>
-            <th>Field</th>
-            <th>Before</th>
-            <th>After</th>
+            <th style={{ width: "25%" }}>Field</th>
+            <th style={{ width: "37.5%" }}>Before</th>
+            <th style={{ width: "37.5%" }}>After</th>
           </tr>
         </thead>
         <tbody>
           {keys.map((key) => {
-            const before = show(oldValues, key);
-            const after = show(newValues, key);
-            const changed =
-              key in oldValues && key in newValues && before !== after;
+            const hasOld = key in oldValues;
+            const hasNew = key in newValues;
+            const beforeVal = hasOld ? formatSnapshotVal(oldValues[key]) : "—";
+            const afterVal = hasNew ? formatSnapshotVal(newValues[key]) : "—";
+            const isChanged = hasOld && hasNew && beforeVal !== afterVal;
+            const isAdded = !hasOld && hasNew;
+            const isRemoved = hasOld && !hasNew;
+
             return (
-              <tr key={key} className={changed ? "diff-changed" : ""}>
+              <tr
+                key={key}
+                className={
+                  isChanged
+                    ? "diff-row-changed"
+                    : isAdded
+                    ? "diff-row-added"
+                    : isRemoved
+                    ? "diff-row-removed"
+                    : ""
+                }
+              >
                 <td className="diff-key">{key}</td>
-                <td>{before}</td>
-                <td>{after}</td>
+                <td>
+                  <span
+                    className={
+                      isChanged || isRemoved ? "diff-val-removed" : "diff-val"
+                    }
+                  >
+                    {beforeVal}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={
+                      isChanged || isAdded ? "diff-val-added" : "diff-val"
+                    }
+                  >
+                    {afterVal}
+                  </span>
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
       <div className="diff-meta">
-        <span>Record: {entry.recordId}</span>
-        {entry.ipAddress && <span>IP: {entry.ipAddress}</span>}
-        {entry.userAgent && <span title={entry.userAgent}>Agent: {entry.userAgent.slice(0, 60)}{entry.userAgent.length > 60 ? "…" : ""}</span>}
+        <span>Record: <strong>{entry.recordId}</strong></span>
+        {entry.ipAddress && <span>IP: <strong>{entry.ipAddress}</strong></span>}
+        {entry.userAgent && (
+          <span title={entry.userAgent}>
+            User Agent: <strong>{entry.userAgent.slice(0, 60)}{entry.userAgent.length > 60 ? "…" : ""}</strong>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -320,7 +360,8 @@ export default function AuditLogPage() {
             onClick={loadPage}
             disabled={loading}
           >
-            {loading ? "Refreshing…" : "⟳ Refresh"}
+            <RefreshCw size={13} className={loading ? "spin" : ""} />
+            <span>{loading ? "Refreshing…" : "Refresh"}</span>
           </button>
           <button
             type="button"
@@ -328,7 +369,8 @@ export default function AuditLogPage() {
             onClick={exportCsv}
             disabled={exporting || !data || data.totalCount === 0}
           >
-            {exporting ? "Exporting…" : "Export CSV"}
+            <Download size={13} />
+            <span>{exporting ? "Exporting…" : "Export CSV"}</span>
           </button>
         </div>
 
@@ -383,7 +425,11 @@ export default function AuditLogPage() {
                       {entry.recordId.slice(0, 8)}…
                     </td>
                     <td className="expander">
-                      {expandedId === entry.id ? "▾" : "▸"}
+                      {expandedId === entry.id ? (
+                        <ChevronDown size={14} strokeWidth={2} />
+                      ) : (
+                        <ChevronRight size={14} strokeWidth={2} />
+                      )}
                     </td>
                   </tr>
                   {expandedId === entry.id && (
