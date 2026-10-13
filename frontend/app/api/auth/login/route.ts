@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { setAuthCookies, type AuthPayload } from "@/lib/auth-cookies";
+import { CSRF_ERROR, isCrossSiteRequest } from "@/lib/csrf";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
 export async function POST(req: NextRequest) {
+  // Stops another site logging the user in to an account of its choosing (#38).
+  if (isCrossSiteRequest(req)) {
+    return NextResponse.json({ error: CSRF_ERROR }, { status: 403 });
+  }
   try {
     const { email, password } = await req.json();
 
