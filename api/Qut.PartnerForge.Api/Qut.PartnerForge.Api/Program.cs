@@ -1,4 +1,5 @@
 using Qut.PartnerForge.Api.Data;
+using Qut.PartnerForge.Api.HealthChecks;
 using Qut.PartnerForge.Api.Interceptors;
 using Qut.PartnerForge.Api.Interfaces;
 using Qut.PartnerForge.Api.Models;
@@ -44,6 +45,8 @@ builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddSingleton<IFilterFieldService, FilterFieldService>();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database");
 
 // Asymmetric JWT validation — only the public key is needed here.
 // Tokens are signed with the private key (in AuthService) so even if the
@@ -192,6 +195,8 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+// Anonymous liveness + DB check for docker compose healthchecks: 200 "Healthy" or 503 "Unhealthy".
+app.MapHealthChecks("/health");
 
 app.Run();
 
