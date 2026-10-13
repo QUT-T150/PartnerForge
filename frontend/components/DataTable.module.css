@@ -12,9 +12,9 @@
 
 .table {
   width: 100%;
+  min-width: 1060px;
   border-collapse: collapse;
   text-align: left;
-  table-layout: fixed;
 }
 
 .table th {
@@ -25,34 +25,28 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 12px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--color-border, #E8E8E5);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
+  vertical-align: middle;
 }
 
 .table td {
-  padding: 13px 18px;
+  padding: 12px 14px;
   border-bottom: 1px solid #F5F5F3;
   color: var(--color-text-primary, #111111);
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 400;
   vertical-align: middle;
-  overflow-wrap: break-word;
-  min-width: 0;
-}
-
-.table th:first-child,
-.table td:first-child {
-  width: 18%;
 }
 
 .table th:last-child,
 .table td:last-child {
-  width: 6.5rem;
+  width: 130px;
+  min-width: 130px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .table tbody tr {

@@ -9,6 +9,7 @@ export interface Column<T> {
   label: string;
   render?: (row: T) => ReactNode;
   width?: string;
+  minWidth?: string;
 }
 
 interface DataTableProps<T> {
@@ -96,7 +97,13 @@ export default function DataTable<T>({
           <thead>
             <tr>
               {columns.map((col) => (
-                <th key={col.key ?? col.label} style={col.width ? { width: col.width } : undefined}>
+                <th
+                  key={col.key ?? col.label}
+                  style={{
+                    width: col.width,
+                    minWidth: col.minWidth,
+                  }}
+                >
                   {col.label}
                 </th>
               ))}
@@ -118,7 +125,10 @@ export default function DataTable<T>({
                     {columns.map((col) => (
                       <td
                         key={col.key ?? col.label}
-                        style={col.width ? { width: col.width } : undefined}
+                        style={{
+                          width: col.width,
+                          minWidth: col.minWidth,
+                        }}
                       >
                         {col.render
                           ? col.render(row)

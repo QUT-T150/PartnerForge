@@ -208,11 +208,29 @@
   border-color: #001C3D;
 }
 
+.action-buttons-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
 .action-btn {
-  font-size: 10px;
-  padding: 3px 7px;
-  margin-right: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
   border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.2;
+  transition: all 0.12s ease;
 }
 
 .edit-btn {

@@ -560,9 +560,10 @@ function PlatformContent() {
       user: users,
     };
     return (
-      <>
+      <div className="action-buttons-group">
         {canEdit(role, type) && (
           <button
+            type="button"
             className="action-btn edit-btn"
             onClick={() => {
               const record = collections[type]?.find((r: any) => r.id === id);
@@ -574,6 +575,7 @@ function PlatformContent() {
         )}
         {canDelete(role, type) && (
           <button
+            type="button"
             className="action-btn delete-btn"
             onClick={() => {
               const record = collections[type]?.find((r: any) => r.id === id);
@@ -587,7 +589,7 @@ function PlatformContent() {
             Delete
           </button>
         )}
-      </>
+      </div>
     );
   }
 
@@ -642,28 +644,36 @@ function PlatformContent() {
   }
 
   const partnerColumns: Column<any>[] = [
-    { label: "Name", width: "12%", render: (r) => r.name },
-    { label: "Registration", width: "8%", render: (r) => r.registrationId || "" },
-    { label: "ABN", width: "9%", render: (r) => r.abn || "" },
-    { label: "Industry", width: "10%", render: (r) => r.industry || "Unspecified" },
+    { label: "Name", minWidth: "150px", render: (r) => r.name },
+    {
+      label: "Registration",
+      minWidth: "125px",
+      render: (r) => <span className="mono nowrap">{r.registrationId || "\u2014"}</span>,
+    },
+    {
+      label: "ABN",
+      minWidth: "115px",
+      render: (r) => <span className="mono nowrap">{r.abn || "\u2014"}</span>,
+    },
+    { label: "Industry", minWidth: "130px", render: (r) => r.industry || "Unspecified" },
     {
       label: "Primary contact",
-      width: "8%",
-      render: (r) => r.primaryContactName || "",
+      minWidth: "135px",
+      render: (r) => r.primaryContactName || "\u2014",
     },
     {
       label: "Partnership",
-      width: "8%",
+      minWidth: "105px",
       render: (r) => <StatusBadge value={r.partnershipStatus} />,
     },
     {
       label: "Email",
-      width: "10%",
-      render: (r) => r.primaryContactEmail || r.email || "",
+      minWidth: "170px",
+      render: (r) => <span className="nowrap">{r.primaryContactEmail || r.email || "\u2014"}</span>,
     },
     {
       label: "Projects",
-      width: "7%",
+      minWidth: "75px",
       render: (r) => (
         <button
           type="button"
@@ -676,23 +686,29 @@ function PlatformContent() {
         </button>
       ),
     },
-    // First / most recent project year - partnership longevity and recency
-    // at a glance (also filterable via First/Latest project year).
-    { label: "Since", width: "7%", render: (r) => r.firstProjectYear ?? "\u2014" },
-    { label: "Latest", width: "7%", render: (r) => r.latestProjectYear ?? "\u2014" },
-    { label: "Pending apps", width: "6%", render: (r) => r.pendingApplicationCount },
+    {
+      label: "Since",
+      minWidth: "65px",
+      render: (r) => <span className="nowrap">{r.firstProjectYear ?? "\u2014"}</span>,
+    },
+    {
+      label: "Latest",
+      minWidth: "65px",
+      render: (r) => <span className="nowrap">{r.latestProjectYear ?? "\u2014"}</span>,
+    },
+    { label: "Pending apps", minWidth: "95px", render: (r) => r.pendingApplicationCount },
     {
       label: "Actions",
-      width: "8%",
+      minWidth: "130px",
       render: (r) => <ActionButtons type="partner" id={r.id} />,
     },
   ];
 
   const projectColumns: Column<any>[] = [
-    { label: "Title", width: "20%", render: (r) => r.title },
+    { label: "Title", minWidth: "180px", render: (r) => r.title },
     {
       label: "Partner",
-      width: "13%",
+      minWidth: "140px",
       render: (r) => (
         <button
           type="button"
@@ -703,28 +719,36 @@ function PlatformContent() {
         </button>
       ),
     },
-    { label: "Type", width: "9%", render: (r) => r.projectType },
-    { label: "Discipline", width: "14%", render: (r) => r.disciplineArea || "" },
+    { label: "Type", minWidth: "100px", render: (r) => r.projectType },
+    { label: "Discipline", minWidth: "130px", render: (r) => r.disciplineArea || "" },
     {
       label: "Teams",
-      width: "8%",
+      minWidth: "85px",
       render: (r) => (r.multipleTeams ? "Multiple" : "Single"),
     },
-    { label: "Intake", width: "8%", render: (r) => `${r.semester} ${r.year}` },
-    { label: "Status", width: "9%", render: (r) => <StatusBadge value={r.status} /> },
-    { label: "Updated", width: "10%", render: (r) => formatDate(r.updatedAt) },
+    {
+      label: "Intake",
+      minWidth: "95px",
+      render: (r) => <span className="nowrap">{`${r.semester} ${r.year}`}</span>,
+    },
+    { label: "Status", minWidth: "95px", render: (r) => <StatusBadge value={r.status} /> },
+    {
+      label: "Updated",
+      minWidth: "95px",
+      render: (r) => <span className="nowrap">{formatDate(r.updatedAt)}</span>,
+    },
     {
       label: "Actions",
-      width: "9%",
+      minWidth: "130px",
       render: (r) => <ActionButtons type="project" id={r.id} />,
     },
   ];
 
   const applicationColumns: Column<any>[] = [
-    { label: "Proposed title", width: "20%", render: (r) => r.proposedTitle },
+    { label: "Proposed title", minWidth: "180px", render: (r) => r.proposedTitle },
     {
       label: "Partner",
-      width: "13%",
+      minWidth: "140px",
       render: (r) => (
         <button
           type="button"
@@ -735,81 +759,96 @@ function PlatformContent() {
         </button>
       ),
     },
-    { label: "Type", width: "9%", render: (r) => r.proposedProjectType || "" },
+    { label: "Type", minWidth: "100px", render: (r) => r.proposedProjectType || "" },
     {
       label: "Discipline",
-      width: "14%",
+      minWidth: "130px",
       render: (r) => r.proposedDisciplineArea || "",
     },
     {
       label: "Teams",
-      width: "8%",
+      minWidth: "85px",
       render: (r) => (r.proposedMultipleTeams ? "Multiple" : "Single"),
     },
     {
       label: "Intake",
-      width: "8%",
-      render: (r) =>
-        [r.proposedSemester, r.proposedYear].filter(Boolean).join(" "),
+      minWidth: "95px",
+      render: (r) => (
+        <span className="nowrap">
+          {[r.proposedSemester, r.proposedYear].filter(Boolean).join(" ")}
+        </span>
+      ),
     },
     {
       label: "Status",
-      width: "9%",
+      minWidth: "95px",
       render: (r) => <StatusBadge value={r.applicationStatus} />,
     },
-    { label: "Submitted", width: "10%", render: (r) => formatDate(r.submittedAt) },
+    {
+      label: "Submitted",
+      minWidth: "95px",
+      render: (r) => <span className="nowrap">{formatDate(r.submittedAt)}</span>,
+    },
     {
       label: "Actions",
-      width: "9%",
+      minWidth: "130px",
       render: (r) => <ActionButtons type="application" id={r.id} />,
     },
   ];
 
   const eventColumns: Column<any>[] = [
-    { label: "Name", render: (r) => r.name },
-    { label: "Type", render: (r) => r.eventType || "" },
-    { label: "Date", render: (r) => formatDate(r.eventDate) },
-    { label: "Location", render: (r) => r.location || "" },
-    { label: "Faculty", render: (r) => r.faculty || "All faculties" },
-    { label: "Attendees", render: (r) => r.attendanceCount },
-    { label: "Actions", render: (r) => <ActionButtons type="event" id={r.id} /> },
+    { label: "Name", minWidth: "160px", render: (r) => r.name },
+    { label: "Type", minWidth: "100px", render: (r) => r.eventType || "" },
+    {
+      label: "Date",
+      minWidth: "95px",
+      render: (r) => <span className="nowrap">{formatDate(r.eventDate)}</span>,
+    },
+    { label: "Location", minWidth: "130px", render: (r) => r.location || "" },
+    { label: "Faculty", minWidth: "120px", render: (r) => r.faculty || "All faculties" },
+    { label: "Attendees", minWidth: "85px", render: (r) => r.attendanceCount },
+    {
+      label: "Actions",
+      minWidth: "130px",
+      render: (r) => <ActionButtons type="event" id={r.id} />,
+    },
   ];
 
   const userColumns: Column<any>[] = [
-    { label: "Name", width: "13%", render: (r) => r.fullName },
-    { label: "Email", width: "14%", render: (r) => r.email },
-    // "Industry Team Manager" is the longest badge label in the app - this
-    // column gets extra width (borrowed from Name/Email/Faculty/Organisation
-    // below) so the badge can stay a normal single-line pill like every other
-    // status badge (e.g. the Active column), instead of wrapping into an
-    // odd-looking multi-line blob.
+    { label: "Name", minWidth: "140px", render: (r) => r.fullName },
+    {
+      label: "Email",
+      minWidth: "160px",
+      render: (r) => <span className="nowrap">{r.email}</span>,
+    },
     {
       label: "Role",
-      width: "23%",
-      // .role-cell trims the badge's font size a touch (see platform.css) -
-      // still needed even at 23% width for this one long value. prettyRole()
-      // shows "Industry Team Manager" instead of the raw snake_case value.
+      minWidth: "170px",
       render: (r) => (
         <span className="role-cell">
           <StatusBadge value={prettyRole(r.role)} />
         </span>
       ),
     },
-    { label: "Faculty", width: "11%", render: (r) => r.faculty || "" },
+    { label: "Faculty", minWidth: "110px", render: (r) => r.faculty || "" },
     {
       label: "Organisation",
-      width: "13%",
+      minWidth: "130px",
       render: (r) => r.organisationName || "",
     },
     {
       label: "Active",
-      width: "8%",
+      minWidth: "85px",
       render: (r) => <StatusBadge value={r.isActive ? "active" : "inactive"} />,
     },
-    { label: "Last login", width: "10%", render: (r) => formatDate(r.lastLoginAt) },
+    {
+      label: "Last login",
+      minWidth: "95px",
+      render: (r) => <span className="nowrap">{formatDate(r.lastLoginAt)}</span>,
+    },
     {
       label: "Actions",
-      width: "8%",
+      minWidth: "130px",
       render: (r) => <ActionButtons type="user" id={r.id} />,
     },
   ];

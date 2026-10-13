@@ -14,7 +14,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { prettyRole } from "@/lib/permissions";
+import { getPermissions, prettyRole, type Role } from "@/lib/permissions";
 import styles from "./Sidebar.module.css";
 
 export default function Sidebar() {
@@ -28,16 +28,12 @@ export default function Sidebar() {
   const isOnDashboard = pathname === "/dashboard";
   const isOnPlatform = pathname === "/platform";
   const isOnAuditLog = pathname === "/audit-log";
+  const isOnImportExport = pathname === "/import-export";
 
   function isActive(target: string): boolean {
     if (target === "/dashboard") return isOnDashboard;
     if (target === "/audit-log") return isOnAuditLog;
-    if (target === "import_export")
-      return (
-        isOnDashboard &&
-        typeof window !== "undefined" &&
-        window.location.hash === "#upload-section"
-      );
+    if (target === "/import-export") return isOnImportExport;
     if (isOnPlatform && currentView === target) return true;
     return false;
   }
@@ -107,11 +103,11 @@ export default function Sidebar() {
           <span>Events</span>
         </Link>
 
-        {user.role === "admin" && (
+        {getPermissions(user.role as Role).upload !== "no" && (
           <Link
-            href="/dashboard#upload-section"
+            href="/import-export"
             className={`${styles.navItem} ${
-              isActive("import_export") ? styles.navItemActive : ""
+              isActive("/import-export") ? styles.navItemActive : ""
             }`}
           >
             <ArrowUpDown className={styles.navIcon} size={16} strokeWidth={1.8} />
