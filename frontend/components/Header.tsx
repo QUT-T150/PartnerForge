@@ -27,6 +27,7 @@ export default function Header({ subtitle }: HeaderProps) {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
     if (target === "/analytics") return isOnAnalytics ? "active" : "";
     if (target === "/audit-log") return pathname === "/audit-log" ? "active" : "";
+    if (target === "/import-export") return pathname === "/import-export" ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
   }
@@ -66,6 +67,14 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
+          {getPermissions(user.role as Role).upload !== "no" && (
+            <Link
+              href="/import-export"
+              className={navActive("/import-export")}
+            >
+              Import / Export
+            </Link>
+          )}
           {getPermissions(user.role as Role).analytics !== "no" && (
             <Link href="/analytics" className={navActive("/analytics")}>
               Analytics
