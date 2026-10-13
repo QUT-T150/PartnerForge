@@ -1,4 +1,5 @@
 using Qut.PartnerForge.Api.Models;
+using Qut.PartnerForge.Api.Models.Analytics;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -56,6 +57,18 @@ public class ApplicationDbContext : DbContext
 
     /// <summary>User-owned named filter presets stored as JSON.</summary>
     public DbSet<SavedFilter> SavedFilters { get; set; }
+
+    /// <summary>Hashed, single-use refresh tokens backing session renewal.</summary>
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
+
+    /// <summary>Read-only per-organisation rollup from the <c>v_organisation_stats</c> view.</summary>
+    public DbSet<OrganisationStat> OrganisationStats { get; set; }
+
+    /// <summary>Read-only per-intake rollup from the <c>v_intake_summary</c> view.</summary>
+    public DbSet<IntakeSummary> IntakeSummaries { get; set; }
+
+    /// <summary>Read-only partner ranking from the <c>v_most_active_partners_3yr</c> view.</summary>
+    public DbSet<MostActivePartner> MostActivePartners { get; set; }
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -168,16 +181,35 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<SavedFilter>()
             .Property(sf => sf.Filters).HasColumnType("json");
 
+        // RefreshToken — hash is the lookup key on presentation, so it must be unique.
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.User)
+            .WithMany()
+            .HasForeignKey(rt => rt.UserId);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.TokenHash)
+            .IsUnique();
+
+        // IsActive is derived from RevokedAt/ExpiresAt; it is not a column.
+        modelBuilder.Entity<RefreshToken>()
+            .Ignore(rt => rt.IsActive);
+
         // AuditLog — JSON columns for old/new row snapshots
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.OldValues).HasColumnType("json");
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.NewValues).HasColumnType("json");
 
+        // Analytics views — keyless and read-only; ToView stops EF creating or writing them.
+        modelBuilder.Entity<OrganisationStat>().HasNoKey().ToView("v_organisation_stats");
+        modelBuilder.Entity<IntakeSummary>().HasNoKey().ToView("v_intake_summary");
+        modelBuilder.Entity<MostActivePartner>().HasNoKey().ToView("v_most_active_partners_3yr");
+
         // Apply snake_case naming to all tables and columns to match schema.sql.
-        // Table names are based on the DbSet property names directly: the relational convention
-        // that does this doesn't run under the InMemory provider (used in tests), which would
-        // otherwise fall back to singular class names and diverge from the MySQL mapping.
+        // Apply snake_case naming to all tables and columns to match schema.sql.
+        // Table name is derived from the DbSet property name (not GetTableName()'s
+        // provider-dependent default) so InMemory-provider tests match production MySQL naming.
         var dbSetNames = typeof(ApplicationDbContext).GetProperties()
             .Where(p => p.PropertyType.IsGenericType &&
                         p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
@@ -185,11 +217,16 @@ public class ApplicationDbContext : DbContext
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            var tableName = dbSetNames.TryGetValue(entityType.ClrType, out var setName)
-                ? setName
-                : entityType.GetTableName();
-            if (tableName != null)
-                entityType.SetTableName(ToSnakeCase(tableName));
+            // View-mapped entities own their name via ToView. Without this guard the DbSet
+            // lookup above would also map them to a table that does not exist.
+            if (entityType.GetViewName() == null)
+            {
+                var tableName = dbSetNames.TryGetValue(entityType.ClrType, out var setName)
+                    ? setName
+                    : entityType.GetTableName();
+                if (tableName != null)
+                    entityType.SetTableName(ToSnakeCase(tableName));
+            }
 
             foreach (var property in entityType.GetProperties())
                 property.SetColumnName(ToSnakeCase(property.Name));

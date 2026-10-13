@@ -32,9 +32,11 @@ CREATE TABLE roles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO roles (name, description) VALUES
-    ('admin',            'Full access. Approves submissions, manages users.'),
-    ('course_organiser', 'PS staff. Manages partners, projects, events.'),
-    ('industry_partner', 'External user. Registers org and submits project EOIs.');
+    ('admin',                 'Full access. Approves submissions, manages users.'),
+    ('course_organiser',      'PS staff. Manages partners, projects, events.'),
+    ('industry_partner',      'External user. Registers org and submits project EOIs.'),
+    ('industry_team',         'External user. Team member at a partner org — views partner data and submits project EOIs.'),
+    ('industry_team_manager', 'External user. Manages team members and submits project EOIs for a partner org.');
 
 CREATE TABLE permissions (
     id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,7 +90,7 @@ INSERT INTO industries (name) VALUES
 
 
 -- =============================================================================
--- 2. USERS
+-- 2. USERS + REFRESH TOKENS
 --   Note: organisation_id FK is added AFTER organisations is created (circular).
 -- =============================================================================
 
@@ -117,6 +119,25 @@ CREATE TABLE users (
 CREATE INDEX idx_users_role          ON users (role_id);
 CREATE INDEX idx_users_faculty       ON users (faculty_id);
 CREATE INDEX idx_users_organisation  ON users (organisation_id);
+
+-- Refresh tokens (#39). Access JWTs are short-lived; this table lets a session be
+-- renewed without re-entering credentials. Only a SHA-256 hash of the token is stored,
+-- and tokens are single-use — refreshing revokes the presented token and issues a
+-- replacement, so a replayed token is detectable.
+CREATE TABLE refresh_tokens (
+    id                       CHAR(36) PRIMARY KEY,
+    user_id                  CHAR(36) NOT NULL,
+    token_hash               CHAR(64) NOT NULL,
+    expires_at               DATETIME(6) NOT NULL,
+    created_at               DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    revoked_at               DATETIME(6),
+    replaced_by_token_hash   CHAR(64),
+
+    UNIQUE KEY uq_refresh_tokens_token_hash (token_hash),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE INDEX idx_refresh_tokens_user_active ON refresh_tokens (user_id, revoked_at, expires_at);
 
 
 -- =============================================================================

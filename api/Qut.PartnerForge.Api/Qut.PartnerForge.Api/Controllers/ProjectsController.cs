@@ -88,6 +88,7 @@ public class ProjectsController : ControllerBase
                 p.ProjectPartnerAgreement,
                 p.StudentProjectAgreement,
                 p.IpAssignmentRationale,
+                p.Notes,
                 p.UpdatedAt
             ))
             .ToListAsync();
@@ -125,6 +126,7 @@ public class ProjectsController : ControllerBase
                 p.ProjectPartnerAgreement,
                 p.StudentProjectAgreement,
                 p.IpAssignmentRationale,
+                p.Notes,
                 p.UpdatedAt
             ))
             .FirstOrDefaultAsync();
@@ -172,6 +174,82 @@ public class ProjectsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new { id = project.Id });
+    }
+
+    /// <summary>Placeholder organisation for imported projects whose organisation could not be matched.</summary>
+    public const string UnassignedImportOrganisationName = "Unassigned (CSV import)";
+
+    /// <summary>
+    /// Bulk inserts project records in a single database transaction. Rows without a valid
+    /// organisation are attached to <see cref="UnassignedImportOrganisationName"/>.
+    /// </summary>
+    /// <param name="requests">List of project payloads.</param>
+    [HttpPost("batch")]
+    [Authorize(Roles = "admin,course_organiser")]
+    public async Task<ActionResult<object>> CreateProjectsBatch([FromBody] IEnumerable<SaveProjectRequest> requests)
+    {
+        int count = 0;
+        Organisation? defaultOrg = null;
+
+        foreach (var request in requests)
+        {
+            var orgId = request.OrganisationId;
+            if (orgId == Guid.Empty || !await _context.Organisations.AnyAsync(o => o.Id == orgId && o.DeletedAt == null))
+            {
+                // Rows without a valid organisation go under one clearly named placeholder
+                // (never an arbitrary existing partner) so they can be found and reassigned.
+                if (defaultOrg == null)
+                {
+                    defaultOrg = await _context.Organisations
+                        .FirstOrDefaultAsync(o => o.Name == UnassignedImportOrganisationName && o.DeletedAt == null);
+                    if (defaultOrg == null)
+                    {
+                        defaultOrg = new Organisation
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = UnassignedImportOrganisationName,
+                            PartnershipStatus = "prospect",
+                            SubmissionStatus = "approved",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        _context.Organisations.Add(defaultOrg);
+                    }
+                }
+                orgId = defaultOrg.Id;
+            }
+
+            var project = new Project
+            {
+                Id = Guid.NewGuid(),
+                Title = request.Title,
+                Description = request.Description,
+                OrganisationId = orgId,
+                FacultyId = request.FacultyId,
+                ProjectType = string.IsNullOrWhiteSpace(request.ProjectType) ? "Capstone" : request.ProjectType,
+                Semester = string.IsNullOrWhiteSpace(request.Semester) ? "Semester 1" : request.Semester,
+                Year = request.Year <= 0 ? DateTime.UtcNow.Year : request.Year,
+                Status = string.IsNullOrWhiteSpace(request.Status) ? "ongoing" : request.Status,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                MultipleTeams = request.MultipleTeams,
+                DisciplineArea = request.DisciplineArea,
+                SecondaryItDiscipline = request.SecondaryItDiscipline,
+                ProjectDeliverables = request.ProjectDeliverables,
+                ProjectPartnerAgreement = request.ProjectPartnerAgreement,
+                StudentProjectAgreement = request.StudentProjectAgreement,
+                IpAssignmentRationale = request.IpAssignmentRationale,
+                Notes = request.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Projects.Add(project);
+            count++;
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { count });
     }
 
     /// <summary>
@@ -253,7 +331,9 @@ public class ProjectsController : ControllerBase
             return query.Where(p => p.Organisation.SubmissionStatus == "approved");
         }
 
-        if (User.IsInRole("industry_partner") &&
+        if ((User.IsInRole("industry_partner") ||
+             User.IsInRole("industry_team") ||
+             User.IsInRole("industry_team_manager")) &&
             Guid.TryParse(User.FindFirstValue("organisation_id"), out var organisationId))
         {
             return query.Where(p => p.OrganisationId == organisationId);

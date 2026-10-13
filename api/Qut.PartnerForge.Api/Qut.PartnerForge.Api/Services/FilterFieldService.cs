@@ -32,6 +32,11 @@ public class FilterFieldService : IFilterFieldService
                 new("city", "City", "text", null),
                 new("state", "State", "text", null),
                 new("country", "Country", "text", null),
+                // Computed from the organisation's projects (see SearchController.ComputedFields).
+                new("project_count", "Project count", "number", null),
+                new("first_project_year", "First project year", "number", null),
+                new("latest_project_year", "Latest project year", "number", null),
+                new("years_partnered", "Years partnered", "number", null),
             ],
             ["projects"] =
             [
@@ -39,6 +44,9 @@ public class FilterFieldService : IFilterFieldService
                 new("project_type", "Project Type", "select",
                     ["capstone", "undergrad", "postgrad"]),
                 new("discipline_area", "Discipline Area", "text", null),
+                new("secondary_it_discipline", "Secondary IT Discipline", "text", null),
+                new("organisation", "Organisation", "text", null),
+                new("faculty", "Faculty", "text", null),
                 new("semester", "Semester", "select",
                     ["S1", "S2", "SS"]),
                 new("year", "Year", "number", null),

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { prettyRole } from "@/lib/permissions";
+import { getPermissions, prettyRole, type Role } from "@/lib/permissions";
 import "./header.css";
 
 interface HeaderProps {
@@ -21,9 +21,11 @@ export default function Header({ subtitle }: HeaderProps) {
   const currentView = searchParams.get("view") || "";
   const isOnDashboard = pathname === "/dashboard";
   const isOnPlatform = pathname === "/platform";
+  const isOnAnalytics = pathname === "/analytics";
 
   function navActive(target: string): string {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
+    if (target === "/analytics") return isOnAnalytics ? "active" : "";
     if (target === "/audit-log") return pathname === "/audit-log" ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
@@ -64,12 +66,11 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
-          <Link
-            href="/platform?view=applications"
-            className={navActive("applications")}
-          >
-            Applications
-          </Link>
+          {getPermissions(user.role as Role).analytics !== "no" && (
+            <Link href="/analytics" className={navActive("/analytics")}>
+              Analytics
+            </Link>
+          )}
           {user.role === "admin" && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management

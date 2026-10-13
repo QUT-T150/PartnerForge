@@ -1,7 +1,6 @@
-"use client";
-
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { X } from "lucide-react";
+import AuditHistoryPanel from "./AuditHistoryPanel";
 
 export type FieldDef = [
   name: string,
@@ -31,6 +30,11 @@ interface RecordModalProps {
   isNew: boolean;
   onClose: () => void;
   onSubmit: (data: Record<string, unknown>) => Promise<void> | void;
+  tableName?: string;
+  canViewHistory?: boolean;
+  peekMode?: boolean;
+  peekLinkLabel?: string;
+  onPeekNavigate?: () => void;
 }
 
 function defaultValue(name: string): unknown {
@@ -63,9 +67,26 @@ export default function RecordModal({
   isNew,
   onClose,
   onSubmit,
+  tableName,
+  canViewHistory = false,
+  peekMode = false,
+  peekLinkLabel = "View record",
+  onPeekNavigate,
 }: RecordModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"form" | "history">("form");
+  const [detailMode, setDetailMode] = useState<"view" | "edit">(
+    isNew ? "edit" : "view",
+  );
+
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDetailMode(isNew ? "edit" : "view");
+      setView("form");
+    }
+  }, [open, record.id, isNew]);
 
   if (!open) return null;
 
@@ -104,12 +125,23 @@ export default function RecordModal({
   }
 
   return (
-    <div className="modal-overlay active" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay active"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        style={view === "history" ? { maxWidth: "800px", width: "90vw" } : undefined}
+      >
         <div className="modal-header">
           <div className="modal-title-wrap">
             <span className="category-label">Record Management</span>
-            <h2>{title}</h2>
+            <h2>
+              {isNew ? `Add ${title}` : detailMode === "edit" ? `Edit ${title}` : `View ${title}`}
+            </h2>
           </div>
           <button
             type="button"
@@ -123,6 +155,103 @@ export default function RecordModal({
 
         {error && <div className="modal-error-banner">{error}</div>}
 
+        {!isNew && canViewHistory && (
+          <div style={{ display: "flex", gap: "8px", marginBottom: "12px", borderBottom: "1px solid #e2e2e2" }}>
+            <button
+              type="button"
+              onClick={() => setView("form")}
+              style={{
+                padding: "8px 12px",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                fontWeight: view === "form" ? 600 : 400,
+                borderBottom: view === "form" ? "2px solid #1a2b4a" : "2px solid transparent",
+              }}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("history")}
+              style={{
+                padding: "8px 12px",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                fontWeight: view === "history" ? 600 : 400,
+                borderBottom: view === "history" ? "2px solid #1a2b4a" : "2px solid transparent",
+              }}
+            >
+              History
+            </button>
+          </div>
+        )}
+
+        {view === "history" && tableName && record.id ? (
+          <AuditHistoryPanel tableName={tableName} recordId={String(record.id)} />
+        ) : detailMode === "view" ? (
+          <div>
+            <div className="form-grid">
+              {fields.map(([name, label, inputType]) => {
+                if (inputType === "password") return null;
+                const raw = record[name];
+                let display: string;
+                if (raw === null || raw === undefined || raw === "") {
+                  display = "\u2014";
+                } else if (inputType === "select-org" || inputType === "select-org-empty") {
+                  display =
+                    (record["organisationName"] as string) ||
+                    partners.find((p) => p.id === raw)?.name ||
+                    "\u2014";
+                } else if (inputType === "select-industry") {
+                  display =
+                    (record["industry"] as string) ||
+                    industries.find((ind) => ind.id === Number(raw))?.name ||
+                    "Unspecified";
+                } else if (typeof raw === "boolean") {
+                  display = raw ? "Yes" : "No";
+                } else if (inputType === "date") {
+                  const d = new Date(String(raw));
+                  display = Number.isNaN(d.getTime())
+                    ? String(raw)
+                    : d.toLocaleDateString();
+                } else {
+                  display = String(raw);
+                }
+                const full = inputType === "textarea" ? " full" : "";
+                return (
+                  <div key={name} className={`form-group${full}`}>
+                    <label>{label}</label>
+                    <div className="view-value">{display}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="modal-actions view-actions">
+              <button type="button" className="secondary-btn" onClick={onClose}>
+                Close
+              </button>
+              {peekMode && onPeekNavigate ? (
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={onPeekNavigate}
+                >
+                  {peekLinkLabel} &rarr;
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => setDetailMode("edit")}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             {fields.map(([name, label, inputType, required, options]) => {
@@ -264,7 +393,7 @@ export default function RecordModal({
             <button
               type="button"
               className="secondary-btn"
-              onClick={onClose}
+              onClick={() => (isNew ? onClose() : setDetailMode("view"))}
               disabled={submitting}
             >
               Cancel
@@ -278,6 +407,7 @@ export default function RecordModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

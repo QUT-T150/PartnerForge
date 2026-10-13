@@ -14,6 +14,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  table-layout: fixed;
 }
 
 .table th {
@@ -27,6 +28,9 @@
   padding: 12px 18px;
   border-bottom: 1px solid var(--color-border, #E8E8E5);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .table td {
@@ -37,10 +41,37 @@
   font-size: 13px;
   font-weight: 400;
   vertical-align: middle;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.table th:first-child,
+.table td:first-child {
+  width: 18%;
+}
+
+.table th:last-child,
+.table td:last-child {
+  width: 6.5rem;
+}
 }
 
 .table tbody tr {
   transition: background-color 0.12s ease;
+}
+
+/* "Jumped here from elsewhere" marker (see highlightRowId on DataTable) -
+   the [data-row-id] attribute selector isn't just decoration: it's what
+   pushes this above the zebra stripe rule above. A plain ".highlightRow"
+   class ties with ":nth-child(even)" on specificity (both are one
+   class-level selector plus two type selectors), so which one actually won
+   came down to source order in the compiled CSS - and on an even-indexed
+   highlighted row that lost, leaving it grey instead of blue. The extra
+   attribute selector (every highlighted row already carries data-row-id -
+   see DataTable.tsx) breaks the tie unconditionally. */
+.table tbody tr[data-row-id].highlightRow {
+  background: #dbeafe;
+  transition: background-color 0.4s ease-out;
 }
 
 .table tbody tr:hover {
@@ -104,6 +135,12 @@
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
+}
+
+.expandedCell {
+  background: #FAFAF9;
+  padding: 14px 18px;
+  border-bottom: 1px solid #F0F0EE;
 }
 
 /* ── Modern Empty State ── */

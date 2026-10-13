@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { request } from "@/lib/api";
 import {
@@ -9,6 +9,7 @@ import {
   canEdit,
   canDelete,
   prettyRole,
+  getPermissions,
   type Role,
   type EntityType,
 } from "@/lib/permissions";
@@ -111,13 +112,9 @@ const FIELD_SETS: Record<string, FieldDef[]> = {
     ["secondaryItDiscipline", "Secondary IT discipline", "text", false],
     ["projectDeliverables", "Project deliverables", "textarea", false],
     ["projectPartnerAgreement", "Project partner agreement", "textarea", false],
-    [
-      "studentProjectAgreement",
-      "Student project agreement - IP licence/assignment",
-      "textarea",
-      false,
-    ],
+    ["studentProjectAgreement", "Student project agreement - IP licence/assignment", "textarea", false],
     ["ipAssignmentRationale", "Assignment of IP - rationale", "textarea", false],
+    ["notes", "Notes", "textarea", false],
   ],
   application: [
     ["proposedTitle", "Title of the proposed project", "text", true],
@@ -170,7 +167,7 @@ const FIELD_SETS: Record<string, FieldDef[]> = {
       "Role",
       "select",
       true,
-      ["admin", "course_organiser", "industry_partner"],
+      ["admin", "course_organiser", "industry_partner","industry_team", "industry_team_manager"],
     ],
     ["facultyId", "Faculty ID", "number", false],
     ["organisationId", "Organisation", "select-org-empty", false],
@@ -184,6 +181,13 @@ const API_PATHS: Record<string, string> = {
   application: "/projectapplications",
   event: "/events",
   user: "/users",
+};
+const AUDIT_TABLE_NAMES: Record<string, string> = {
+  partner: "organisations",
+  project: "projects",
+  application: "project_applications",
+  event: "events",
+  user: "users",
 };
 
 function filterRows(rows: any[], filters: Record<string, string>): any[] {
@@ -199,11 +203,27 @@ function filterRows(rows: any[], filters: Record<string, string>): any[] {
 
 function PlatformContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user } = useAuth();
   const role = (user?.role || "industry_partner") as Role;
+  const perms = getPermissions(role);
 
   const [partners, setPartners] = useState<any[]>([]);
+  // Bumped after any add/edit/delete so each FilterBuilder re-runs its
+  // current search and reloads its filter options (see refreshKey there).
+  const [dataVersion, setDataVersion] = useState(0);
   const [projects, setProjects] = useState<any[]>([]);
+  // Full, unfiltered/unpaginated project list, kept in sync with loadData()
+  // independently of the Projects tab's own FilterBuilder (which overwrites
+  // `projects` with just its current filtered/paginated page). The
+  // Organisations tab's per-org expandable Projects panel reads from this
+  // instead, so it always reflects every project regardless of what filters
+  // or paging the Projects tab currently has applied. Also used to work out
+  // which page a specific project falls on when jumping to it from
+  // elsewhere (see pageForProjectId below).
+  const [allProjects, setAllProjects] = useState<any[]>([]);
+  // Same idea, mirrored for organisations (see pageForPartnerId below).
+  const [allPartners, setAllPartners] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -218,6 +238,16 @@ function PlatformContent() {
   const [projectsTotal, setProjectsTotal] = useState<number | null>(null);
   const [eventsTotal, setEventsTotal] = useState<number | null>(null);
 
+  // Which page of results the Partners/Projects tables are currently
+  // showing (results are paginated 25/page - see FilterBuilder). Normally
+  // driven by the table's own Previous/Next controls, but also set
+  // directly when jumping to a specific record from elsewhere, so that
+  // record's page loads before we try to highlight/scroll to its row (see
+  // pageForProjectId/pageForPartnerId and goToProjectsTab/
+  // goToOrganisationsTab).
+  const [partnerPage, setPartnerPage] = useState(1);
+  const [projectPage, setProjectPage] = useState(1);
+
   // Filters
   const [applicationsSearch, setApplicationsSearch] = useState("");
   const [applicationsStatus, setApplicationsStatus] = useState("pending");
@@ -231,10 +261,45 @@ function PlatformContent() {
   const [modalType, setModalType] = useState("");
   const [modalId, setModalId] = useState<string | null>(null);
   const [modalRecord, setModalRecord] = useState<Record<string, unknown>>({});
+  // True while the modal is a quick read-only peek opened from a Partner link
+  // elsewhere (e.g. a project's organisation), rather than the Organisations
+  // tab's own Edit action - swaps the modal's Edit button for a plain link
+  // back to the Organisations tab instead of letting you edit from here.
+  const [partnerPeek, setPartnerPeek] = useState(false);
+  // Which organisation row (if any) has its inline "Projects" list expanded,
+  // toggled by clicking the Projects count in the Organisations table.
+  const [expandedOrgId, setExpandedOrgId] = useState<string | null>(null);
+  // Which project row (if any) was just jumped to from elsewhere (e.g. the
+  // "View in Projects" link out of an organisation's peeked project) - it
+  // gets a highlight fill on the Projects table so it's obvious at a glance,
+  // and is cleared again once the user leaves the Projects tab.
+  const [highlightProjectId, setHighlightProjectId] = useState<string | null>(
+    null,
+  );
+  // Same idea, mirrored for the Organisations table - set when "View in
+  // Organisations" is used to jump there from a peeked Partner record.
+  const [highlightPartnerId, setHighlightPartnerId] = useState<string | null>(
+    null,
+  );
 
   const view = searchParams.get("view") || "all";
   const effectiveView =
-    view === "users" && role !== "admin" ? "all" : VIEW_COPY[view] ? view : "all";
+    view === "users" && perms.users === "no" ? "all" : VIEW_COPY[view] ? view : "all";
+
+  useEffect(() => {
+    if (effectiveView !== "projects") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHighlightProjectId(null);
+      // Reset paging too, so reopening the Projects tab normally (not via a
+      // "View in Projects" jump) starts back on page 1 instead of wherever
+      // a previous jump left it.
+      setProjectPage(1);
+    }
+    if (effectiveView !== "partners") {
+      setHighlightPartnerId(null);
+      setPartnerPage(1);
+    }
+  }, [effectiveView]);
 
   const loadData = useCallback(async () => {
     try {
@@ -245,18 +310,19 @@ function PlatformContent() {
         request("/events"),
         request("/organisations/industries"),
       ];
-      if (role === "admin") reqs.push(request("/users"));
+      if (perms.users !== "no") reqs.push(request("/users"));
 
       const results = await Promise.all(reqs);
-      setPartners(results[0] || []);
-      setProjects(results[1] || []);
+      // partners/projects/events (the table rows) are owned by each
+      // section's FilterBuilder, which loads its own filtered, paginated
+      // results - setting them here too would overwrite the filtered view
+      // with every record (e.g. right after saving). Only the full lists
+      // used for lookups (peeks, dropdowns, expanded rows) are set here.
+      setAllPartners(results[0] || []);
+      setAllProjects(results[1] || []);
       setApplications(results[2] || []);
-      setEvents(results[3] || []);
       setIndustries(results[4] || []);
       setUsers(results[5] || []);
-      setPartnersTotal(null);
-      setProjectsTotal(null);
-      setEventsTotal(null);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load data");
@@ -269,15 +335,25 @@ function PlatformContent() {
     loadData();
   }, [loadData]);
 
-  const handlePartnerResults = useCallback((data: { items: any[]; total: number }) => {
-    setPartners(data.items);
-    setPartnersTotal(data.total);
-  }, []);
+  const handlePartnerResults = useCallback(
+    (data: { items: any[]; total: number; page?: number }) => {
+      setPartners(data.items);
+      setPartnersTotal(data.total);
+      // Keep our page state truthful to what actually loaded (e.g. if a
+      // requested page turned out past the last page).
+      if (data.page != null) setPartnerPage(data.page);
+    },
+    [],
+  );
 
-  const handleProjectResults = useCallback((data: { items: any[]; total: number }) => {
-    setProjects(data.items);
-    setProjectsTotal(data.total);
-  }, []);
+  const handleProjectResults = useCallback(
+    (data: { items: any[]; total: number; page?: number }) => {
+      setProjects(data.items);
+      setProjectsTotal(data.total);
+      if (data.page != null) setProjectPage(data.page);
+    },
+    [],
+  );
 
   const handleEventResults = useCallback((data: { items: any[]; total: number }) => {
     setEvents(data.items);
@@ -292,7 +368,7 @@ function PlatformContent() {
     proposedYear: applicationsYear,
   });
   const filteredUsers =
-    role === "admin"
+    perms.users !== "no"
       ? filterRows(users, {
           fullName: usersSearch,
           role: usersRole,
@@ -351,16 +427,93 @@ function PlatformContent() {
     return effectiveView === "all" || effectiveView === section;
   }
 
-  function openModal(type: string, record: any = {}) {
+  function openModal(type: string, record: any = {}, peek: boolean = false) {
     setModalType(type);
     setModalId(record.id || null);
     setModalRecord(record);
+    setPartnerPeek(peek);
   }
 
   function closeModal() {
     setModalType("");
     setModalId(null);
     setModalRecord({});
+    setPartnerPeek(false);
+  }
+
+  // Lets a Partner cell in the Projects/Applications tables show that
+  // organisation's record as a quick read-only peek, without leaving the
+  // current tab - no more one-click jump to a whole different section.
+  function openPartnerPeek(organisationId?: string) {
+    if (!organisationId) return;
+    const record = allPartners.find((p) => p.id === organisationId);
+    if (record) openModal("partner", record, true);
+  }
+
+  // Organisations results are paginated 25/page, sorted by name (see the
+  // Organisations FilterBuilder below) - a highlighted row only ends up
+  // visible if that same page is actually loaded first. allPartners holds
+  // every organisation regardless of the Organisations tab's own paging, so
+  // sorting a copy the same way the API does tells us which page a given
+  // organisation would land on.
+  function pageForPartnerId(id: string, pageSize = 25): number {
+    const sorted = [...allPartners].sort((a, b) =>
+      String(a?.name ?? "").localeCompare(String(b?.name ?? ""), undefined, {
+        sensitivity: "base",
+      }),
+    );
+    const idx = sorted.findIndex((p) => String(p?.id) === id);
+    return idx === -1 ? 1 : Math.floor(idx / pageSize) + 1;
+  }
+
+  // Called from inside that peek when the user actually wants to manage the
+  // organisation - navigates to the Organisations tab and turns the still-open
+  // modal into a normal, editable view.
+  function goToOrganisationsTab() {
+    setPartnerPeek(false);
+    const id = modalRecord.id ? String(modalRecord.id) : null;
+    setHighlightPartnerId(id);
+    // Jump the Organisations table to whichever page actually contains this
+    // row - otherwise the highlight effect finds nothing to highlight
+    // whenever the row isn't on page 1.
+    setPartnerPage(id ? pageForPartnerId(id) : 1);
+    // scroll: false - we're about to scroll the highlighted row into view
+    // ourselves (see DataTable's highlightRowId effect); without this,
+    // Next.js resets the page scroll to the top right after navigating and
+    // wins the race against our scrollIntoView.
+    router.push("/platform?view=partners", { scroll: false });
+  }
+
+  // Lets a project title in an organisation's expanded Projects list show
+  // that project's record as a quick read-only peek, without leaving the
+  // Organisations tab.
+  function openProjectPeek(project: any) {
+    openModal("project", project, true);
+  }
+
+  // Same idea as pageForPartnerId above, mirrored for projects (sorted by
+  // title, matching the Projects FilterBuilder's sortBy="title" below).
+  function pageForProjectId(id: string, pageSize = 25): number {
+    const sorted = [...allProjects].sort((a, b) =>
+      String(a?.title ?? "").localeCompare(String(b?.title ?? ""), undefined, {
+        sensitivity: "base",
+      }),
+    );
+    const idx = sorted.findIndex((p) => String(p?.id) === id);
+    return idx === -1 ? 1 : Math.floor(idx / pageSize) + 1;
+  }
+
+  // Called from inside that peek when the user actually wants to manage the
+  // project - navigates to the Projects tab and turns the still-open modal
+  // into a normal, editable view.
+  function goToProjectsTab() {
+    setPartnerPeek(false);
+    setExpandedOrgId(null);
+    const id = modalRecord.id ? String(modalRecord.id) : null;
+    setHighlightProjectId(id);
+    // Same reasoning as pageForPartnerId/goToOrganisationsTab above.
+    setProjectPage(id ? pageForProjectId(id) : 1);
+    router.push("/platform?view=projects", { scroll: false });
   }
 
   async function handleSave(data: Record<string, unknown>) {
@@ -370,6 +523,7 @@ function PlatformContent() {
       body: JSON.stringify(data),
     });
     closeModal();
+    setDataVersion((v) => v + 1);
     await loadData();
   }
 
@@ -388,6 +542,7 @@ function PlatformContent() {
     const path = API_PATHS[deleteTarget.type];
     try {
       await request(`${path}/${deleteTarget.id}`, { method: "DELETE" });
+      setDataVersion((v) => v + 1);
       await loadData();
     } catch (err) {
       console.error("Delete failed", err);
@@ -436,46 +591,176 @@ function PlatformContent() {
     );
   }
 
+  // Renders a compact list of an organisation's own projects for the
+  // expandable row under its "Projects" count - traces from an organisation
+  // straight to what it's linked to, without leaving the Organisations tab.
+  function renderOrgProjects(r: any) {
+    const orgProjects = allProjects.filter((p) => p.organisationId === r.id);
+    if (orgProjects.length === 0) {
+      return (
+        <div className="org-projects-empty">
+          No projects recorded for this organisation yet.
+        </div>
+      );
+    }
+    return (
+      <table className="org-projects-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Discipline</th>
+            <th>Intake</th>
+            <th>Status</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orgProjects.map((p) => (
+            <tr key={p.id}>
+              <td>
+                <button
+                  type="button"
+                  className="partner-link"
+                  onClick={() => openProjectPeek(p)}
+                >
+                  {p.title}
+                </button>
+              </td>
+              <td>{p.projectType}</td>
+              <td>{p.disciplineArea || ""}</td>
+              <td>{`${p.semester} ${p.year}`}</td>
+              <td>
+                <StatusBadge value={p.status} />
+              </td>
+              <td>{formatDate(p.updatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
   const partnerColumns: Column<any>[] = [
-    { label: "Name", render: (r) => r.name },
-    { label: "Registration", render: (r) => r.registrationId || "" },
-    { label: "ABN", render: (r) => r.abn || "" },
-    { label: "Industry", render: (r) => r.industry || "Unspecified" },
-    { label: "Primary contact", render: (r) => r.primaryContactName || "" },
-    { label: "Partnership", render: (r) => <StatusBadge value={r.partnershipStatus} /> },
-    { label: "Email", render: (r) => r.primaryContactEmail || r.email || "" },
-    { label: "Projects", render: (r) => r.projectCount },
-    { label: "Pending apps", render: (r) => r.pendingApplicationCount },
-    { label: "Actions", render: (r) => <ActionButtons type="partner" id={r.id} /> },
+    { label: "Name", width: "12%", render: (r) => r.name },
+    { label: "Registration", width: "8%", render: (r) => r.registrationId || "" },
+    { label: "ABN", width: "9%", render: (r) => r.abn || "" },
+    { label: "Industry", width: "10%", render: (r) => r.industry || "Unspecified" },
+    {
+      label: "Primary contact",
+      width: "8%",
+      render: (r) => r.primaryContactName || "",
+    },
+    {
+      label: "Partnership",
+      width: "8%",
+      render: (r) => <StatusBadge value={r.partnershipStatus} />,
+    },
+    {
+      label: "Email",
+      width: "10%",
+      render: (r) => r.primaryContactEmail || r.email || "",
+    },
+    {
+      label: "Projects",
+      width: "7%",
+      render: (r) => (
+        <button
+          type="button"
+          className="expand-toggle"
+          onClick={() =>
+            setExpandedOrgId((prev) => (prev === r.id ? null : r.id))
+          }
+        >
+          {r.projectCount ?? 0} {expandedOrgId === r.id ? "\u25be" : "\u25b8"}
+        </button>
+      ),
+    },
+    // First / most recent project year - partnership longevity and recency
+    // at a glance (also filterable via First/Latest project year).
+    { label: "Since", width: "7%", render: (r) => r.firstProjectYear ?? "\u2014" },
+    { label: "Latest", width: "7%", render: (r) => r.latestProjectYear ?? "\u2014" },
+    { label: "Pending apps", width: "6%", render: (r) => r.pendingApplicationCount },
+    {
+      label: "Actions",
+      width: "8%",
+      render: (r) => <ActionButtons type="partner" id={r.id} />,
+    },
   ];
 
   const projectColumns: Column<any>[] = [
-    { label: "Title", render: (r) => r.title },
-    { label: "Partner", render: (r) => r.organisationName },
-    { label: "Type", render: (r) => r.projectType },
-    { label: "Discipline", render: (r) => r.disciplineArea || "" },
-    { label: "Teams", render: (r) => (r.multipleTeams ? "Multiple" : "Single") },
-    { label: "Intake", render: (r) => `${r.semester} ${r.year}` },
-    { label: "Status", render: (r) => <StatusBadge value={r.status} /> },
-    { label: "Updated", render: (r) => formatDate(r.updatedAt) },
-    { label: "Actions", render: (r) => <ActionButtons type="project" id={r.id} /> },
+    { label: "Title", width: "20%", render: (r) => r.title },
+    {
+      label: "Partner",
+      width: "13%",
+      render: (r) => (
+        <button
+          type="button"
+          className="partner-link"
+          onClick={() => openPartnerPeek(r.organisationId)}
+        >
+          {r.organisationName}
+        </button>
+      ),
+    },
+    { label: "Type", width: "9%", render: (r) => r.projectType },
+    { label: "Discipline", width: "14%", render: (r) => r.disciplineArea || "" },
+    {
+      label: "Teams",
+      width: "8%",
+      render: (r) => (r.multipleTeams ? "Multiple" : "Single"),
+    },
+    { label: "Intake", width: "8%", render: (r) => `${r.semester} ${r.year}` },
+    { label: "Status", width: "9%", render: (r) => <StatusBadge value={r.status} /> },
+    { label: "Updated", width: "10%", render: (r) => formatDate(r.updatedAt) },
+    {
+      label: "Actions",
+      width: "9%",
+      render: (r) => <ActionButtons type="project" id={r.id} />,
+    },
   ];
 
   const applicationColumns: Column<any>[] = [
-    { label: "Proposed title", render: (r) => r.proposedTitle },
-    { label: "Partner", render: (r) => r.organisationName },
-    { label: "Type", render: (r) => r.proposedProjectType || "" },
-    { label: "Discipline", render: (r) => r.proposedDisciplineArea || "" },
-    { label: "Teams", render: (r) => (r.proposedMultipleTeams ? "Multiple" : "Single") },
+    { label: "Proposed title", width: "20%", render: (r) => r.proposedTitle },
+    {
+      label: "Partner",
+      width: "13%",
+      render: (r) => (
+        <button
+          type="button"
+          className="partner-link"
+          onClick={() => openPartnerPeek(r.organisationId)}
+        >
+          {r.organisationName}
+        </button>
+      ),
+    },
+    { label: "Type", width: "9%", render: (r) => r.proposedProjectType || "" },
+    {
+      label: "Discipline",
+      width: "14%",
+      render: (r) => r.proposedDisciplineArea || "",
+    },
+    {
+      label: "Teams",
+      width: "8%",
+      render: (r) => (r.proposedMultipleTeams ? "Multiple" : "Single"),
+    },
     {
       label: "Intake",
+      width: "8%",
       render: (r) =>
         [r.proposedSemester, r.proposedYear].filter(Boolean).join(" "),
     },
-    { label: "Status", render: (r) => <StatusBadge value={r.applicationStatus} /> },
-    { label: "Submitted", render: (r) => formatDate(r.submittedAt) },
+    {
+      label: "Status",
+      width: "9%",
+      render: (r) => <StatusBadge value={r.applicationStatus} />,
+    },
+    { label: "Submitted", width: "10%", render: (r) => formatDate(r.submittedAt) },
     {
       label: "Actions",
+      width: "9%",
       render: (r) => <ActionButtons type="application" id={r.id} />,
     },
   ];
@@ -491,17 +776,42 @@ function PlatformContent() {
   ];
 
   const userColumns: Column<any>[] = [
-    { label: "Name", render: (r) => r.fullName },
-    { label: "Email", render: (r) => r.email },
-    { label: "Role", render: (r) => <StatusBadge value={r.role} /> },
-    { label: "Faculty", render: (r) => r.faculty || "" },
-    { label: "Organisation", render: (r) => r.organisationName || "" },
+    { label: "Name", width: "13%", render: (r) => r.fullName },
+    { label: "Email", width: "14%", render: (r) => r.email },
+    // "Industry Team Manager" is the longest badge label in the app - this
+    // column gets extra width (borrowed from Name/Email/Faculty/Organisation
+    // below) so the badge can stay a normal single-line pill like every other
+    // status badge (e.g. the Active column), instead of wrapping into an
+    // odd-looking multi-line blob.
+    {
+      label: "Role",
+      width: "23%",
+      // .role-cell trims the badge's font size a touch (see platform.css) -
+      // still needed even at 23% width for this one long value. prettyRole()
+      // shows "Industry Team Manager" instead of the raw snake_case value.
+      render: (r) => (
+        <span className="role-cell">
+          <StatusBadge value={prettyRole(r.role)} />
+        </span>
+      ),
+    },
+    { label: "Faculty", width: "11%", render: (r) => r.faculty || "" },
+    {
+      label: "Organisation",
+      width: "13%",
+      render: (r) => r.organisationName || "",
+    },
     {
       label: "Active",
+      width: "8%",
       render: (r) => <StatusBadge value={r.isActive ? "active" : "inactive"} />,
     },
-    { label: "Last login", render: (r) => formatDate(r.lastLoginAt) },
-    { label: "Actions", render: (r) => <ActionButtons type="user" id={r.id} /> },
+    { label: "Last login", width: "10%", render: (r) => formatDate(r.lastLoginAt) },
+    {
+      label: "Actions",
+      width: "8%",
+      render: (r) => <ActionButtons type="user" id={r.id} />,
+    },
   ];
 
   return (
@@ -557,7 +867,7 @@ function PlatformContent() {
                 <div className="summary-value">{eventsTotal ?? events.length}</div>
               </div>
             )}
-            {isVisible("users") && role === "admin" && (
+            {isVisible("users") && perms.users !== "no" && (
               <div className="summary-card">
                 <div className="summary-label">Users</div>
                 <div className="summary-value">{filteredUsers.length}</div>
@@ -590,8 +900,11 @@ function PlatformContent() {
             )}
             <FilterBuilder
               entity="organisations"
+              refreshKey={dataVersion}
               sortBy="name"
               onResults={handlePartnerResults}
+              page={partnerPage}
+              onPageChange={setPartnerPage}
             />
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
@@ -600,6 +913,14 @@ function PlatformContent() {
                 columns={partnerColumns}
                 rows={partners}
                 emptyMessage="No partner organisations found matching your filters."
+                expandedRowId={expandedOrgId}
+                getRowId={(r: any) => r.id}
+                renderExpandedRow={renderOrgProjects}
+                highlightRowId={highlightPartnerId}
+                page={partnerPage}
+                pageSize={25}
+                total={partnersTotal ?? undefined}
+                onPageChange={setPartnerPage}
               />
             )}
           </section>
@@ -629,8 +950,11 @@ function PlatformContent() {
             )}
             <FilterBuilder
               entity="projects"
+              refreshKey={dataVersion}
               sortBy="title"
               onResults={handleProjectResults}
+              page={projectPage}
+              onPageChange={setProjectPage}
             />
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
@@ -639,6 +963,12 @@ function PlatformContent() {
                 columns={projectColumns}
                 rows={projects}
                 emptyMessage="No projects found matching your filters."
+                getRowId={(r: any) => r.id}
+                highlightRowId={highlightProjectId}
+                page={projectPage}
+                pageSize={25}
+                total={projectsTotal ?? undefined}
+                onPageChange={setProjectPage}
               />
             )}
           </section>
@@ -738,6 +1068,7 @@ function PlatformContent() {
             )}
             <FilterBuilder
               entity="events"
+              refreshKey={dataVersion}
               sortBy="event_date"
               onResults={handleEventResults}
             />
@@ -754,7 +1085,7 @@ function PlatformContent() {
         )}
 
         {/* Users Section (admin only) */}
-        {isVisible("users") && role === "admin" && (
+        {isVisible("users") && perms.users !== "no" && (
           <section className="section">
             {!isSingleView && (
               <div className="section-header">
@@ -793,6 +1124,8 @@ function PlatformContent() {
                 <option value="admin">Admin</option>
                 <option value="course_organiser">Course organiser</option>
                 <option value="industry_partner">Industry partner</option>
+                <option value="industry_team">Industry team</option>
+<option value="industry_team_manager">Industry team manager</option>
               </select>
               <select
                 value={usersActive}
@@ -819,14 +1152,19 @@ function PlatformContent() {
       {modalType && FIELD_SETS[modalType] && (
         <RecordModal
           open={!!modalType}
-          title={`${modalId ? "Edit" : "Add"} ${modalType}`}
+          title={modalType}
           fields={FIELD_SETS[modalType]}
           record={modalRecord}
-          partners={partners}
+          partners={allPartners}
           industries={industries}
           isNew={!modalId}
           onClose={closeModal}
           onSubmit={handleSave}
+          tableName={AUDIT_TABLE_NAMES[modalType]}
+          canViewHistory={role === "admin" || role === "course_organiser"}
+          peekMode={partnerPeek}
+          peekLinkLabel={modalType === "project" ? "View in Projects" : "View in Organisations"}
+          onPeekNavigate={modalType === "project" ? goToProjectsTab : goToOrganisationsTab}
         />
       )}
 

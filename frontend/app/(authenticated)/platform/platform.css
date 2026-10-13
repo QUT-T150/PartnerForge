@@ -247,6 +247,7 @@
   letter-spacing: 0.06em;
   padding: 2px 8px;
   border-radius: 9999px;
+  /* Badges read as neat one-line pills. Long role names fit the sized column. */
   white-space: nowrap;
   background: #F3F4F6;
   color: #4B5563;
@@ -260,6 +261,19 @@
   border-radius: 50%;
   background-color: currentColor;
   opacity: 0.85;
+}
+
+/* The Role column (see userColumns) is sized to fit even the longest role
+   label, "Industry Team Manager", on one line - a slightly smaller font
+   is the last bit of headroom needed so this badge stays a normal
+   single-line pill like every other status badge (e.g. Active), rather
+   than wrapping into a multi-line shape the pill styling wasn't designed
+   for. overflow-wrap stays on purely as a safety net for an unexpectedly
+   narrow window. */
+.role-cell .status {
+  font-size: 11px;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .status-approved,
@@ -465,6 +479,13 @@
   border-top: 1px solid var(--color-border, #E8E8E5);
 }
 
+/* Read-only view bar only (Close + Edit/View-in-Organisations): Close sits
+   bottom-left, the other action stays on the right. The Add/Edit form's
+   Cancel/Save bar keeps the default flex-end layout above. */
+.modal-actions.view-actions {
+  justify-content: space-between;
+}
+
 .secondary-btn {
   background: var(--color-subtle, #F8F8F6);
   color: var(--color-text-mid, #555555);
@@ -487,4 +508,104 @@
 
 .hidden {
   display: none;
+}
+
+.partner-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #1d4ed8;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.partner-link:hover {
+  color: #1544ad;
+}
+
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: #1544ad;
+}
+
+.expand-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.expand-toggle:hover {
+  color: #1544ad;
+}
+
+.org-projects-empty {
+  padding: 4px 2px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.org-projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.org-projects-table th,
+.org-projects-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  min-width: 0;
+}
+
+.org-projects-table td {
+  overflow-wrap: break-word;
+}
+
+.org-projects-table th:first-child,
+.org-projects-table td:first-child {
+  width: 34%;
+}
+
+.org-projects-table th {
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  /* Keep header labels on one line, truncated with an ellipsis if the
+     column is too narrow, instead of an ugly mid-word wrap. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-projects-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.modal .form-group .view-value {
+  padding: 2px 0 4px;
+  font-size: 14px;
+  color: #111827;
+  min-height: 20px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
