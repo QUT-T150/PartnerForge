@@ -8,6 +8,7 @@ import {
   Building,
   ClipboardList,
   Calendar,
+  FileText,
   BarChart3,
   Users,
   ShieldAlert,
