@@ -54,7 +54,6 @@
 .table td:last-child {
   width: 6.5rem;
 }
-}
 
 .table tbody tr {
   transition: background-color 0.12s ease;

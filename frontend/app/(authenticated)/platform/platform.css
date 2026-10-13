@@ -85,7 +85,6 @@
 }
 
 /* Seamlessly integrate DataTable shell inside section without nested borders */
-.section :global(.tableShell),
 .section [class*="tableShell"] {
   border: none;
   border-radius: 0;
