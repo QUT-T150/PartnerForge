@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import styles from "./DataTable.module.css";
 
 export interface Column<T> {
@@ -18,6 +19,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   onPageChange?: (page: number) => void;
   emptyMessage?: string;
+  emptyAction?: ReactNode;
 }
 
 export default function DataTable<T>({
@@ -28,7 +30,8 @@ export default function DataTable<T>({
   page = 1,
   pageSize = 25,
   onPageChange,
-  emptyMessage = "No records to display.",
+  emptyMessage = "No records matching your current filter criteria.",
+  emptyAction,
 }: DataTableProps<T>) {
   const tableData = data ?? rows ?? [];
   const resultTotal = total ?? tableData.length;
@@ -37,7 +40,18 @@ export default function DataTable<T>({
   const lastPage = Math.max(1, Math.ceil(resultTotal / pageSize));
 
   if (tableData.length === 0) {
-    return <div className={`empty ${styles.empty}`}>{emptyMessage}</div>;
+    return (
+      <div className={styles.tableShell}>
+        <div className={styles.emptyContainer}>
+          <div className={styles.emptyIconWrap}>
+            <Inbox size={24} strokeWidth={1.5} />
+          </div>
+          <h4 className={styles.emptyTitle}>No records found</h4>
+          <p className={styles.emptySubtitle}>{emptyMessage}</p>
+          {emptyAction && <div className={styles.emptyAction}>{emptyAction}</div>}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -69,7 +83,7 @@ export default function DataTable<T>({
       {onPageChange && (
         <div className={styles.footer}>
           <span className={styles.count}>
-            Showing {firstResult}-{lastResult} of {resultTotal} results
+            Showing <strong>{firstResult}–{lastResult}</strong> of <strong>{resultTotal}</strong> records
           </span>
           <div className={styles.pagination}>
             <button
@@ -77,16 +91,20 @@ export default function DataTable<T>({
               type="button"
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
+              aria-label="Previous page"
             >
-              Previous
+              <ChevronLeft size={13} strokeWidth={2} />
+              <span>Previous</span>
             </button>
             <button
               className={styles.button}
               type="button"
               onClick={() => onPageChange(page + 1)}
               disabled={page >= lastPage}
+              aria-label="Next page"
             >
-              Next
+              <span>Next</span>
+              <ChevronRight size={13} strokeWidth={2} />
             </button>
           </div>
         </div>

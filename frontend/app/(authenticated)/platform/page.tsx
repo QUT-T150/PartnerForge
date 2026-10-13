@@ -20,6 +20,7 @@ import DataTable, {
 import FilterBuilder from "@/components/FilterBuilder";
 import RecordModal, { type FieldDef } from "@/components/RecordModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import { Plus, Search } from "lucide-react";
 import "./platform.css";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -511,16 +512,19 @@ function PlatformContent() {
         {isVisible("partners") && (
           <section className="section">
             <div className="section-header">
-              <h2>Industry Partners</h2>
-              <span>Organisations visible to your role</span>
-            </div>
-            <div className="section-tools">
+              <div className="section-title-wrap">
+                <h2>Industry Partners</h2>
+                <span className="section-badge">
+                  {partnersTotal ?? partners.length} records
+                </span>
+              </div>
               {canCreate(role, "partner") && (
                 <button
                   className="primary-btn"
                   onClick={() => openModal("partner")}
                 >
-                  Add Partner
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add Partner</span>
                 </button>
               )}
             </div>
@@ -532,7 +536,11 @@ function PlatformContent() {
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
             ) : (
-              <DataTable columns={partnerColumns} rows={partners} />
+              <DataTable
+                columns={partnerColumns}
+                rows={partners}
+                emptyMessage="No partner organisations found matching your filters."
+              />
             )}
           </section>
         )}
@@ -541,16 +549,19 @@ function PlatformContent() {
         {isVisible("projects") && (
           <section className="section">
             <div className="section-header">
-              <h2>Projects</h2>
-              <span>Approved and active project records</span>
-            </div>
-            <div className="section-tools">
+              <div className="section-title-wrap">
+                <h2>Projects</h2>
+                <span className="section-badge">
+                  {projectsTotal ?? projects.length} records
+                </span>
+              </div>
               {canCreate(role, "project") && (
                 <button
                   className="primary-btn"
                   onClick={() => openModal("project")}
                 >
-                  Add Project
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add Project</span>
                 </button>
               )}
             </div>
@@ -562,7 +573,11 @@ function PlatformContent() {
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
             ) : (
-              <DataTable columns={projectColumns} rows={projects} />
+              <DataTable
+                columns={projectColumns}
+                rows={projects}
+                emptyMessage="No projects found matching your filters."
+              />
             )}
           </section>
         )}
@@ -571,16 +586,32 @@ function PlatformContent() {
         {isVisible("applications") && (
           <section className="section">
             <div className="section-header">
-              <h2>Project Applications</h2>
-              <span>Partner-facing project submissions</span>
+              <div className="section-title-wrap">
+                <h2>Project Applications</h2>
+                <span className="section-badge">
+                  {filteredApplications.length} proposals
+                </span>
+              </div>
+              {canCreate(role, "application") && (
+                <button
+                  className="primary-btn"
+                  onClick={() => openModal("application")}
+                >
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add Application</span>
+                </button>
+              )}
             </div>
             <div className="section-tools">
-              <input
-                type="search"
-                placeholder="Search applications..."
-                value={applicationsSearch}
-                onChange={(e) => setApplicationsSearch(e.target.value)}
-              />
+              <div className="search-input-wrap">
+                <Search size={14} className="search-icon" />
+                <input
+                  type="search"
+                  placeholder="Search applications..."
+                  value={applicationsSearch}
+                  onChange={(e) => setApplicationsSearch(e.target.value)}
+                />
+              </div>
               <select
                 value={applicationsStatus}
                 onChange={(e) => setApplicationsStatus(e.target.value)}
@@ -606,14 +637,6 @@ function PlatformContent() {
                 value={applicationsYear}
                 onChange={(e) => setApplicationsYear(e.target.value)}
               />
-              {canCreate(role, "application") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("application")}
-                >
-                  Add Application
-                </button>
-              )}
             </div>
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
@@ -621,6 +644,7 @@ function PlatformContent() {
               <DataTable
                 columns={applicationColumns}
                 rows={filteredApplications}
+                emptyMessage="No project applications found matching your criteria."
               />
             )}
           </section>
@@ -630,18 +654,19 @@ function PlatformContent() {
         {isVisible("events") && (
           <section className="section">
             <div className="section-header">
-              <h2>Events</h2>
-              <span>
-                Showcases, expos, meetings, and partner engagement activity
-              </span>
-            </div>
-            <div className="section-tools">
+              <div className="section-title-wrap">
+                <h2>Events</h2>
+                <span className="section-badge">
+                  {eventsTotal ?? events.length} records
+                </span>
+              </div>
               {canCreate(role, "event") && (
                 <button
                   className="primary-btn"
                   onClick={() => openModal("event")}
                 >
-                  Add Event
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add Event</span>
                 </button>
               )}
             </div>
@@ -653,7 +678,11 @@ function PlatformContent() {
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
             ) : (
-              <DataTable columns={eventColumns} rows={events} />
+              <DataTable
+                columns={eventColumns}
+                rows={events}
+                emptyMessage="No events found matching your filters."
+              />
             )}
           </section>
         )}
@@ -662,16 +691,32 @@ function PlatformContent() {
         {isVisible("users") && role === "admin" && (
           <section className="section">
             <div className="section-header">
-              <h2>User Management</h2>
-              <span>Admin-only account and role management</span>
+              <div className="section-title-wrap">
+                <h2>User Management</h2>
+                <span className="section-badge">
+                  {filteredUsers.length} accounts
+                </span>
+              </div>
+              {canCreate(role, "user") && (
+                <button
+                  className="primary-btn"
+                  onClick={() => openModal("user")}
+                >
+                  <Plus size={15} strokeWidth={2} />
+                  <span>Add User</span>
+                </button>
+              )}
             </div>
             <div className="section-tools">
-              <input
-                type="search"
-                placeholder="Search users..."
-                value={usersSearch}
-                onChange={(e) => setUsersSearch(e.target.value)}
-              />
+              <div className="search-input-wrap">
+                <Search size={14} className="search-icon" />
+                <input
+                  type="search"
+                  placeholder="Search users..."
+                  value={usersSearch}
+                  onChange={(e) => setUsersSearch(e.target.value)}
+                />
+              </div>
               <select
                 value={usersRole}
                 onChange={(e) => setUsersRole(e.target.value)}
@@ -689,19 +734,15 @@ function PlatformContent() {
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
-              {canCreate(role, "user") && (
-                <button
-                  className="primary-btn"
-                  onClick={() => openModal("user")}
-                >
-                  Add User
-                </button>
-              )}
             </div>
             {loadError ? (
               <div className="error">Could not load data ({loadError}).</div>
             ) : (
-              <DataTable columns={userColumns} rows={filteredUsers} />
+              <DataTable
+                columns={userColumns}
+                rows={filteredUsers}
+                emptyMessage="No user accounts found matching your query."
+              />
             )}
           </section>
         )}
