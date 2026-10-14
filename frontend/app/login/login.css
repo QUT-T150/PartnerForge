@@ -156,7 +156,14 @@
   border: 1px solid #BBF7D0;
 }
 
-.demo-pills-wrap {
+.message.info {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
+.demo-pills-wrap,
+.test-accounts {
   margin-top: 20px;
   padding: 12px 14px;
   background: var(--color-subtle, #F8F8F6);

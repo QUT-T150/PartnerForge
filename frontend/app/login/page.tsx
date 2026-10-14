@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  LOGIN_REASON_MESSAGES,
+  parseLoginReason,
+  safeNextPath,
+} from "@/lib/auth-redirect";
 import "./login.css";
 
 const TEST_ACCOUNTS = [
@@ -12,14 +17,26 @@ const TEST_ACCOUNTS = [
 ];
 
 export default function LoginPage() {
+  // useSearchParams needs a Suspense boundary so the page can still prerender.
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = parseLoginReason(searchParams.get("reason"));
+  const nextPath = safeNextPath(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{
-    type: "error" | "success";
+    type: "error" | "success" | "info";
     text: string;
-  } | null>(null);
+  } | null>(reason ? { type: "info", text: LOGIN_REASON_MESSAGES[reason] } : null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -64,7 +81,7 @@ export default function LoginPage() {
         text: `Welcome, ${data.fullName || "User"}. Redirecting...`,
       });
 
-      setTimeout(() => router.push("/dashboard"), 600);
+      setTimeout(() => router.push(nextPath), 600);
     } catch (err) {
       const errorMessage =
         err instanceof Error

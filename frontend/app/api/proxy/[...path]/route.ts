@@ -5,6 +5,7 @@ import {
   clearAuthCookies,
   refreshAccessToken,
 } from "@/lib/auth-cookies";
+import { CSRF_ERROR, isCrossSiteRequest } from "@/lib/csrf";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
@@ -12,6 +13,11 @@ async function proxyRequest(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  // Reject state-changing requests from other sites before touching cookies (#38).
+  if (isCrossSiteRequest(req)) {
+    return NextResponse.json({ error: CSRF_ERROR }, { status: 403 });
+  }
+
   const { path } = await params;
   const cookieStore = await cookies();
 

@@ -1,3 +1,8 @@
+> **Archived (April 2026).** Historical notes from the Phase 1 pull request, kept for reference only.
+> Several details are out of date: the database is now MySQL 8.4 (not PostgreSQL), JWTs are signed
+> with RSA-SHA256 (not HMAC), and audit logging happens in the API write path rather than database
+> triggers. See the [README](../../README.md) for the current stack.
+
 # Phase 1 — API aligned to new schema, unified Docker stack
 
 ## Summary

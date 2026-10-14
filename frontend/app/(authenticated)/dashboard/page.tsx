@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { request } from "@/lib/api";
-import { getPermissions, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
+import { canUseImportExport, IMPORT_EXPORT_HREF } from "@/lib/navigation";
 import "./dashboard.css";
 
 interface MetricCounts {
@@ -62,7 +63,6 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const role = user.role as Role;
-  const perms = getPermissions(role);
   const firstName = user.fullName.split(" ")[0];
 
   const journeySteps = [
@@ -155,17 +155,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Action Strip */}
-        {perms.upload !== "no" && (
+        {canUseImportExport(role) && (
           <div className="admin-strip">
             <div className="admin-strip-title">
               <span className="category-label">Quick Actions</span>
             </div>
             <div className="admin-actions-grid">
-              <Link href="/import-export" className="admin-action-item">
+              <Link href={IMPORT_EXPORT_HREF} className="admin-action-item">
                 <ArrowUpDown size={15} strokeWidth={1.8} />
                 <span>Bulk CSV Import / Export</span>
               </Link>
-              {user.role === "admin" && (
+              {role === "admin" && (
                 <>
                   <Link href="/platform?view=users" className="admin-action-item">
                     <Users size={15} strokeWidth={1.8} />
