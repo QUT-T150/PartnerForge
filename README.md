@@ -144,3 +144,11 @@ Ensure ports 3000, 8080, 3306, or 5050 are not used by other running processes.
 
 **API or Frontend keeps crashing**
 Check container logs via `docker compose logs frontend` or `docker compose logs api`. Try `docker compose down -v` then `docker compose up --build` for a fresh restart.
+## Documentation
+
+- [Web documentation portal](http://localhost:3000/docs) (`/docs` in the running app)
+- [API reference and search DSL](docs/api.md)
+- [Database schema and migrations](docs/database-and-migrations.md)
+- [Local development guide](docs/development.md)
+- [Frontend architecture](docs/frontend-architecture.md)
+- [Contributing and branch protection](CONTRIBUTING.md)
