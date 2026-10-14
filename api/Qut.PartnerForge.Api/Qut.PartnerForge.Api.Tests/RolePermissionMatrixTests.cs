@@ -14,13 +14,13 @@ public class RolePermissionMatrixTests
     {
         // Organisations
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisations), null! },
-        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisation), null!},
+        new object[] { typeof(OrganisationsController), nameof(OrganisationsController.GetOrganisation), null! },
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.CreateOrganisation), "admin,course_organiser" },
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.UpdateOrganisation), "admin,course_organiser" },
         new object[] { typeof(OrganisationsController), nameof(OrganisationsController.DeleteOrganisation), "admin" },
 
         // Projects
-        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProjects),null! },
+        new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProjects), null! },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.GetProject), null! },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.CreateProject), "admin,course_organiser" },
         new object[] { typeof(ProjectsController), nameof(ProjectsController.UpdateProject), "admin,course_organiser" },
@@ -35,7 +35,7 @@ public class RolePermissionMatrixTests
 
         // Events
         new object[] { typeof(EventsController), nameof(EventsController.GetEvents), null! },
-        new object[] { typeof(EventsController), nameof(EventsController.GetEvent), null!},
+        new object[] { typeof(EventsController), nameof(EventsController.GetEvent), null! },
         new object[] { typeof(EventsController), nameof(EventsController.CreateEvent), "admin,course_organiser" },
         new object[] { typeof(EventsController), nameof(EventsController.UpdateEvent), "admin,course_organiser" },
         new object[] { typeof(EventsController), nameof(EventsController.DeleteEvent), "admin" },
@@ -55,7 +55,7 @@ public class RolePermissionMatrixTests
         new object[] { typeof(AuthController), nameof(AuthController.Register), "admin" },
     };
 
-        [Theory]
+    [Theory]
     [MemberData(nameof(EndpointRoleMatrix))]
     public void Endpoint_HasExpectedAuthorizeRoles(Type controllerType, string methodName, string? expectedRoles)
     {

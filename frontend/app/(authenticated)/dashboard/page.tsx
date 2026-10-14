@@ -1,163 +1,185 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Building2,
   ClipboardList,
   Calendar,
-  FileText,
-  BarChart3,
+  ArrowRight,
+  ChevronRight,
+  ArrowUpDown,
+  ShieldCheck,
   Users,
-  ShieldAlert,
-  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import {
-  PERM_LABEL,
-  getPermissions,
-  type Role,
-  type PermLevel,
-} from "@/lib/permissions";
+import { request } from "@/lib/api";
+import { type Role } from "@/lib/permissions";
+import { canUseImportExport, IMPORT_EXPORT_HREF } from "@/lib/navigation";
 import "./dashboard.css";
 
-const WELCOME_MESSAGES: Record<string, string> = {
-  admin:
-    "You have full access to all features, including user and organisation management.",
-  course_organiser:
-    "You can read and edit Industry Partners, Projects, and Events. User management is restricted to administrators.",
-  industry_partner:
-    "You have read-only access to projects and events relevant to your organisation.",
-};
-
-interface TabCard {
-  key: string;
-  Icon: LucideIcon;
-  title: string;
-  desc: string;
-  href: string;
+interface MetricCounts {
+  partners: number | null;
+  projects: number | null;
+  events: number | null;
 }
-
-const TAB_CARDS: TabCard[] = [
-  {
-    key: "partners",
-    Icon: Building2,
-    title: "Industry Partners",
-    desc: "View and manage QUT's industry partner organisations.",
-    href: "/platform?view=partners",
-  },
-  {
-    key: "projects",
-    Icon: ClipboardList,
-    title: "Projects",
-    desc: "Browse capstone, undergrad, and postgrad project history.",
-    href: "/platform?view=projects",
-  },
-  {
-    key: "events",
-    Icon: Calendar,
-    title: "Events",
-    desc: "Track showcases, expos, and industry meetings.",
-    href: "/platform?view=events",
-  },
-  {
-    key: "applications",
-    Icon: FileText,
-    title: "Project Applications",
-    desc: "Review partner-facing project proposals and submission status.",
-    href: "/platform?view=applications",
-  },
-  {
-    key: "analytics",
-    Icon: BarChart3,
-    title: "Analytics",
-    desc: "Reports on partner activity, intake trends, and engagement.",
-    href: "#",
-  },
-  {
-    key: "users",
-    Icon: Users,
-    title: "User Management",
-    desc: "Add staff accounts, assign roles, manage permissions.",
-    href: "/platform?view=users",
-  },
-];
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [counts, setCounts] = useState<MetricCounts>({
+    partners: null,
+    projects: null,
+    events: null,
+  });
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([
+      request<unknown[]>("/Organisations"),
+      request<unknown[]>("/Projects"),
+      request<unknown[]>("/Events"),
+    ]).then(([orgs, projs, evts]) => {
+      if (!active) return;
+      setCounts({
+        partners:
+          orgs.status === "fulfilled" && Array.isArray(orgs.value)
+            ? orgs.value.length
+            : null,
+        projects:
+          projs.status === "fulfilled" && Array.isArray(projs.value)
+            ? projs.value.length
+            : null,
+        events:
+          evts.status === "fulfilled" && Array.isArray(evts.value)
+            ? evts.value.length
+            : null,
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!user) return null;
 
   const role = user.role as Role;
-  const perms = getPermissions(role);
   const firstName = user.fullName.split(" ")[0];
-  const welcomeMsg =
-    WELCOME_MESSAGES[role] || WELCOME_MESSAGES.industry_partner;
+
+  const journeySteps = [
+    {
+      step: "01",
+      title: "Organisations",
+      count: counts.partners,
+      countLabel: "Partners",
+      desc: "Manage industry partners, company profiles, and engagement tiers.",
+      href: "/platform?view=partners",
+      Icon: Building2,
+    },
+    {
+      step: "02",
+      title: "Projects",
+      count: counts.projects,
+      countLabel: "Projects",
+      desc: "Browse capstone briefs, team allocations, and project agreements.",
+      href: "/platform?view=projects",
+      Icon: ClipboardList,
+    },
+    {
+      step: "03",
+      title: "Events",
+      count: counts.events,
+      countLabel: "Events",
+      desc: "Track industry showcases, capstone expos, and meeting history.",
+      href: "/platform?view=events",
+      Icon: Calendar,
+    },
+  ];
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-container">
-        <div className="welcome">
-          <h2>Welcome back, {firstName}</h2>
-          <p>{welcomeMsg}</p>
+        {/* Page Header */}
+        <header className="dashboard-header">
+          <div className="category-label">PartnerForge // Overview</div>
+          <h1 className="page-heading">Welcome back, {firstName}</h1>
+          <p className="dashboard-subtitle">
+            Industry engagement pipeline and partner records at a glance.
+          </p>
+        </header>
+
+        {/* Section Label */}
+        <div className="section-header-row">
+          <span className="section-title">Engagement Pipeline</span>
+          <span className="section-meta">Linear workflow</span>
         </div>
 
-        {role === "admin" && (
-          <div className="admin-only">
-            <div className="admin-only-header">
-              <ShieldAlert size={18} />
-              <h3>Administrator tools</h3>
-            </div>
-            <p>
-              You have full access. From here you can create new organisations,
-              manage users, and configure system-wide settings.
-            </p>
-          </div>
-        )}
-
-        <div className="section-title">Application tabs</div>
-
-        <div className="grid">
-          {TAB_CARDS.map((tab) => {
-            const level = (perms[tab.key] || "no") as PermLevel;
-            const label = PERM_LABEL[level];
-            const disabled = level === "no";
-            const { Icon } = tab;
-
-            const cardContent = (
-              <>
-                <div className="tab-icon">
-                  <Icon size={20} strokeWidth={1.8} />
-                </div>
-                <div className="tab-title">{tab.title}</div>
-                <div className="tab-desc">{tab.desc}</div>
-                <div className={`tab-permission ${label.cls}`}>
-                  {label.text}
-                </div>
-              </>
-            );
-
-            if (disabled) {
-              return (
-                <div key={tab.key} className="tab-card disabled">
-                  {cardContent}
-                </div>
-              );
-            }
-
+        {/* Pipeline Journey Cards */}
+        <div className="journey-grid">
+          {journeySteps.map((step, idx) => {
+            const { Icon } = step;
             return (
-              <Link key={tab.key} href={tab.href} className="tab-card">
-                {cardContent}
-              </Link>
+              <div key={step.step} className="journey-card-wrapper">
+                <Link href={step.href} className="journey-card">
+                  <div className="card-top">
+                    <div className="step-tag">{step.step}</div>
+                    <div className="card-icon-wrap">
+                      <Icon size={18} strokeWidth={1.8} />
+                    </div>
+                  </div>
+
+                  <div className="card-body">
+                    <div className="card-metric">
+                      <span className="metric-number">
+                        {step.count !== null ? step.count : "—"}
+                      </span>
+                      <span className="metric-label">{step.countLabel}</span>
+                    </div>
+                    <h2 className="card-title">{step.title}</h2>
+                    <p className="card-desc">{step.desc}</p>
+                  </div>
+
+                  <div className="card-footer">
+                    <span>View {step.title}</span>
+                    <ArrowRight size={14} className="card-arrow" />
+                  </div>
+                </Link>
+
+                {idx < journeySteps.length - 1 && (
+                  <div className="journey-connector" aria-hidden="true">
+                    <ChevronRight size={18} />
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
 
-        <div className="info-row">
-          <strong>Authenticated session.</strong> You are signed in with a
-          secure httpOnly cookie. Every request your tabs make to the API is
-          proxied through the server with your credentials attached
-          automatically.
-        </div>
+        {/* Quick Action Strip */}
+        {canUseImportExport(role) && (
+          <div className="admin-strip">
+            <div className="admin-strip-title">
+              <span className="category-label">Quick Actions</span>
+            </div>
+            <div className="admin-actions-grid">
+              <Link href={IMPORT_EXPORT_HREF} className="admin-action-item">
+                <ArrowUpDown size={15} strokeWidth={1.8} />
+                <span>Bulk CSV Import / Export</span>
+              </Link>
+              {role === "admin" && (
+                <>
+                  <Link href="/platform?view=users" className="admin-action-item">
+                    <Users size={15} strokeWidth={1.8} />
+                    <span>Manage Users & Roles</span>
+                  </Link>
+                  <Link href="/audit-log" className="admin-action-item">
+                    <ShieldCheck size={15} strokeWidth={1.8} />
+                    <span>System Audit Logs</span>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { prettyRole } from "@/lib/permissions";
+import { getPermissions, prettyRole, type Role } from "@/lib/permissions";
+import { IMPORT_EXPORT_HREF, canUseImportExport } from "@/lib/navigation";
 import "./header.css";
 
 interface HeaderProps {
@@ -21,15 +22,19 @@ export default function Header({ subtitle }: HeaderProps) {
   const currentView = searchParams.get("view") || "";
   const isOnDashboard = pathname === "/dashboard";
   const isOnPlatform = pathname === "/platform";
+  const isOnAnalytics = pathname === "/analytics";
 
   function navActive(target: string): string {
     if (target === "/dashboard") return isOnDashboard ? "active" : "";
+    if (target === "/analytics") return isOnAnalytics ? "active" : "";
     if (target === "/audit-log") return pathname === "/audit-log" ? "active" : "";
+    if (target === IMPORT_EXPORT_HREF) return pathname === IMPORT_EXPORT_HREF ? "active" : "";
     if (isOnPlatform && currentView === target) return "active";
     return "";
   }
 
   const rolePretty = prettyRole(user.role);
+  const canViewUsers = getPermissions(user.role).users !== "no";
 
   return (
     <header className="site-header">
@@ -64,13 +69,20 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
-          <Link
-            href="/platform?view=applications"
-            className={navActive("applications")}
-          >
-            Applications
-          </Link>
-          {user.role === "admin" && (
+          {canUseImportExport(user.role as Role) && (
+            <Link
+              href={IMPORT_EXPORT_HREF}
+              className={navActive(IMPORT_EXPORT_HREF)}
+            >
+              Import / Export
+            </Link>
+          )}
+          {getPermissions(user.role as Role).analytics !== "no" && (
+            <Link href="/analytics" className={navActive("/analytics")}>
+              Analytics
+            </Link>
+          )}
+          {canViewUsers && (
             <Link href="/platform?view=users" className={navActive("users")}>
               User Management
             </Link>

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { setAuthCookies, type AuthPayload } from "@/lib/auth-cookies";
+import { CSRF_ERROR, isCrossSiteRequest } from "@/lib/csrf";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
-const COOKIE_NAME = "auth-token";
-const MAX_AGE = 3600; // 1 hour, matching JWT expiry
 
 export async function POST(req: NextRequest) {
+  // Stops another site logging the user in to an account of its choosing (#38).
+  if (isCrossSiteRequest(req)) {
+    return NextResponse.json({ error: CSRF_ERROR }, { status: 403 });
+  }
   try {
     const { email, password } = await req.json();
 
@@ -24,16 +28,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: message }, { status });
     }
 
-    const data = await backendRes.json();
+    const data: AuthPayload = await backendRes.json();
 
     const cookieStore = await cookies();
-    cookieStore.set(COOKIE_NAME, data.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: MAX_AGE,
-    });
+    setAuthCookies(cookieStore, data);
 
     return NextResponse.json({
       fullName: data.fullName,

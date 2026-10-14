@@ -130,6 +130,10 @@ docker compose logs -f api
 - `api/Qut.PartnerForge.Api/` - ASP.NET Core API solution and unit tests
 - `Schema/` - `schema.sql` (MySQL DDL) and database design documentation
 
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. It covers branch naming, the review and CI rules on `main`, and how issues move across the project board.
+
 ## Troubleshooting
 
 **"Cannot connect to Docker daemon"**

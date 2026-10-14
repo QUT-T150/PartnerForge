@@ -1,0 +1,6 @@
+Full Name,Email,Password,Role,Is Active
+"Dr. Alexander Vance",a.vance@qut.edu.au,Password123!,course_organiser,true
+"Samantha Wright",s.wright@industrypartner.com,Password123!,industry_partner,true
+"Prof. Fiona Gallagher",f.gallagher@qut.edu.au,Password123!,course_organiser,true
+"Michael Chang",m.chang@alpharobotics.com,Password123!,industry_partner,true
+"Admin Backup Account",admin.backup@qut.edu.au,Password123!,admin,true

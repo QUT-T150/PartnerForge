@@ -43,5 +43,9 @@ Source of truth for the Phase 2 backlog, consolidated from the Phase 1 Capstone 
 | E9 | Final documentation & handover | 12–13 | 6 | Includes IP / data-governance questions |
 
 Issue-level breakdown lives on GitHub (each child issue links back to its epic).
-Run `scripts/create_phase2_backlog.sh` to (re)create labels, milestones, and issues —
-it is idempotent for labels/milestones but will duplicate issues if run twice.
+
+`scripts/create_phase2_backlog.sh` is the script that created that backlog (issues
+#1–#54, on 2026-07-28), and it records which part of the Phase 1 report each epic and
+issue came from. It is kept for that provenance, **not** as something to run again —
+labels and milestones are idempotent, but a second run would add a duplicate copy of
+all ~54 issues. To add a single issue, use `gh issue create`.
