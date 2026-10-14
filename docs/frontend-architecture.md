@@ -19,29 +19,32 @@ components, and the conventions to follow.
 
 ```
 frontend/
-├── middleware.ts                    # Redirects logged-out users to /login (edge)
+├── middleware.ts                    # Edge session validation and role gating
 ├── app/
 │   ├── layout.tsx                   # Root layout, imports globals.css
 │   ├── page.tsx                     # "/" → redirect("/dashboard")
 │   ├── login/                       # Public login page
+│   ├── docs/                        # Interactive Developer Documentation portal
 │   ├── (authenticated)/             # Route group: every page here needs a session
-│   │   ├── layout.tsx               # AuthProvider + AuthGate + Header
+│   │   ├── layout.tsx               # AuthProvider + AuthGate + Sidebar
 │   │   ├── dashboard/
 │   │   ├── platform/                # Organisations / Projects / Events / Users (?view=…)
 │   │   ├── analytics/
-│   │   └── audit-log/
+│   │   ├── audit-log/
+│   │   └── import-export/           # Dedicated CSV import and data export
 │   └── api/                         # Server-side route handlers (the BFF)
 │       ├── auth/login|logout|refresh|session/route.ts
 │       └── proxy/[...path]/route.ts # Forwards every data call to the .NET API
-├── components/                      # Shared UI: FilterBuilder, DataTable, RecordModal, Header, charts/
+├── components/                      # Shared UI: Sidebar, FilterBuilder, DataTable, RecordModal, ConfirmModal, charts/
 ├── lib/
 │   ├── api.ts                       # request() — the client-side fetch helper
 │   ├── api/search.ts                # Typed client for /api/search/*
 │   ├── api/analytics.ts             # Typed client for /api/analytics/*
 │   ├── auth-context.tsx             # AuthProvider / useAuth()
 │   ├── auth-cookies.ts              # Cookie names, set/clear, refreshAccessToken()
-│   └── permissions.ts               # Role → permission matrix, canCreate/canEdit/canDelete
-├── helper/upload-core.ts            # CSV import logic (column mapping, validation)
+│   ├── permissions.ts               # Role → permission matrix (5 roles), canCreate/canEdit/canDelete
+│   └── navigation.ts                # Platform navigation utilities
+├── helper/upload-core.ts            # CSV import logic (column mapping, validation, address parsing)
 └── tests/                           # Vitest tests
 ```
 
@@ -166,10 +169,12 @@ is served at `/dashboard`. The group exists so all protected pages share one lay
 |---|---|---|
 | `/` | `app/page.tsx` | Redirects to `/dashboard` |
 | `/login` | `app/login/page.tsx` | Public |
-| `/dashboard` | `(authenticated)/dashboard` | |
+| `/docs` | `app/docs/page.tsx` | Interactive Developer & API Documentation Portal (public/dev) |
+| `/dashboard` | `(authenticated)/dashboard` | Metrics, quick actions, and recent activity |
 | `/platform?view=partners\|projects\|events\|users` | `(authenticated)/platform` | One page, view picked by the `view` query param |
 | `/analytics` | `(authenticated)/analytics` | Hidden in nav for roles with `analytics: "no"` |
 | `/audit-log` | `(authenticated)/audit-log` | Admin only (nav) |
+| `/import-export` | `(authenticated)/import-export` | CSV bulk import with column mapping and JSON/CSV data export |
 
 ### Two layers of protection
 
@@ -376,12 +381,13 @@ What the code actually does today (main):
 
 ---
 
-## 6. Pending changes
-
-Open work that will change parts of this doc. Update the sections listed when it merges.
-
-| Work | What changes | Sections |
+## 6. Architecture Status & Merged Work
+ 
+All major Epic 1 & 2 foundations have been merged into `main`:
+ 
+| Feature / PR | Status | Architectural Impact |
 |---|---|---|
-| #8 / #49 / #50 UI refinement (`feature/ui-refinement-8`) | Adds `Sidebar`, `ConfirmModal`, Tailwind import + design tokens in `globals.css`; RecordModal gets an error banner and async `onSubmit` | 1, 4, 5 |
-| #62 / #63 Import/Export (PR #91) | New `/import-export` page; CSV import moves off the dashboard; `lib/navigation.ts`. (As of writing, `/import-export` is not yet in the middleware matcher.) | 1, 3, 4 |
-| #40 / #32 Route protection (PR #89) | Session-expiry feedback, role-aware nav | 2, 3 |
+| #8 / #49 / #50 UI Refinement (`feature/ui-refinement-8`) | Merged in `main` | Full design system with tokens in `globals.css`, unified `Sidebar`, `ConfirmModal`, async form error handling in `RecordModal`. |
+| #62 / #63 Import/Export (PR #91) | Merged in `main` | Dedicated `/import-export` page for CSV bulk ingestion, auto-mapping, address normalization, and JSON/CSV data export. |
+| #40 / #32 Route Protection & BFF Auth (PR #89) | Merged in `main` | Sliding session expiry feedback, 5-role RBAC (`admin`, `course_organiser`, `industry_partner`, `industry_team`, `industry_team_manager`), automated refresh token rotation via httpOnly cookies. |
+| Production Cloud Deployment | Merged in `main` | Live deployment on Railway with environment key rotation, health checks (`/health`), and dynamic CORS origins. |

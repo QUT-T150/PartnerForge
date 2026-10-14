@@ -10,38 +10,50 @@ This guide covers the local development environment, tooling, test suites, and t
 - **.NET SDK**: Version 10.0 (or 9.0+)
 - **Node.js**: Version 22 LTS or newer
 - **pnpm**: Version 10+ (`npm install -g pnpm`)
+- **Railway CLI**: Optional for cloud operations (`npm install -g @railway/cli`)
 
 ---
 
-## 2. Running the Full Stack
+## 2. Running the Full Stack Locally
 
-### Step 1: Start Infrastructure
+### Option A: Docker Compose (All-in-One)
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
-Services started:
+Services:
 - `qpf-db`: MySQL 8.4 Server (`localhost:3306`)
-- `qpf-adminer`: Web database manager (`http://localhost:8080`)
-  - Server: `db`
-  - Username: `qpf`
-  - Password: `qpf_dev_secret`
-  - Database: `partnerforge`
+- `qpf-api`: ASP.NET Core API (`http://localhost:8080`)
+- `qpf-frontend`: Next.js 16 Web App (`http://localhost:3000`)
+- `qpf-adminer`: Web database manager (`http://localhost:8081`)
 
-### Step 2: Start Backend API
+---
+
+### Option B: Hybrid (Docker Database + Local Services)
+
+#### Step 1: Start Database
+```bash
+docker compose up -d db
+```
+
+#### Step 2: Start Backend API
 ```bash
 dotnet run --project api/Qut.PartnerForge.Api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.csproj
 ```
-- API Endpoint: `http://localhost:5000`
-- Swagger UI: `http://localhost:5000/swagger`
+- API Base: `http://localhost:5133` (or configured port)
+- Swagger / OpenAPI UI: `http://localhost:5133/swagger`
+- Healthcheck: `http://localhost:5133/health`
 
-### Step 3: Start Frontend Web App
+#### Step 3: Start Frontend Web App
 ```bash
 cd frontend
-pnpm install --no-frozen-lockfile
+pnpm install
 pnpm dev
 ```
 - Web Application: `http://localhost:3000`
 - Documentation Portal: `http://localhost:3000/docs`
+
+> [!NOTE]
+> When running the API with `dotnet run` (port 5133), set `BACKEND_URL=http://localhost:5133` in `frontend/.env.local`.
 
 ---
 
@@ -51,15 +63,16 @@ pnpm dev
 ```bash
 dotnet test api/Qut.PartnerForge.Api/Qut.PartnerForge.Api.Tests/Qut.PartnerForge.Api.Tests.csproj
 ```
+Runs 163 tests covering DTO validation, authentication, role-permission matrices, scoping, rate limiting, and health checks.
 
 ### Frontend Type Check & Tests (Vitest)
 ```bash
 cd frontend
 
-# Run unit tests
+# Run Vitest test suites
 pnpm test
 
-# Run TypeScript typecheck
+# Run TypeScript type check
 pnpm run type-check
 
 # Verify Next.js production build
@@ -68,21 +81,39 @@ pnpm run build
 
 ---
 
-## 4. Troubleshooting Guide
+## 4. Railway Cloud Deployment Runbook
 
-### Port 3306 Conflict (Local MySQL already running)
+1. **Link Project**:
+   ```bash
+   railway login
+   railway link
+   ```
+2. **Database Initialization**:
+   - Open a tunnel: `railway connect MySQL --tunnel-only -P 3307`
+   - Execute `Schema/schema.sql` on `127.0.0.1:3307`.
+   - Optionally seed demo data: execute `Schema/seed_demo.sql`.
+3. **API Configuration**:
+   - Set Root Directory: `api/Qut.PartnerForge.Api`
+   - Set Dockerfile Path: `Qut.PartnerForge.Api/Dockerfile`
+   - Set variables:
+     - `ConnectionStrings__Default=Server=${{MySQL.MYSQLHOST}};Port=${{MySQL.MYSQLPORT}};Database=${{MySQL.MYSQLDATABASE}};User=${{MySQL.MYSQLUSER}};Password=${{MySQL.MYSQLPASSWORD}}`
+     - `Jwt__PrivateKeyPem` & `Jwt__PublicKeyPem` (production 2048-bit RSA keys).
+4. **Frontend Configuration**:
+   - Set `PORT=3000`
+   - Set `BACKEND_URL=https://<api-domain>.up.railway.app` (or private domain `http://api.railway.internal:8080`).
+
+---
+
+## 5. Troubleshooting Guide
+
+### Port 3306 Conflict (Local MySQL running)
 - **Symptom**: `docker compose up` fails with `port 3306 is already allocated`.
-- **Solution**: Stop local MySQL service (`net stop MySQL` or stop via Services manager) or change mapped host port in `docker-compose.yml` (e.g. `"3307:3306"`).
+- **Solution**: Stop local MySQL service (`net stop MySQL` in Admin terminal) or edit the host port in `docker-compose.yml`.
 
-### 500 Error: Unknown Column / Outdated Database Volume
-- **Symptom**: API throws `MySqlException: Unknown column 'o.notes' in 'field list'`.
-- **Cause**: The persistent Docker volume was created prior to recent schema additions.
-- **Solution**: Reset volume with:
-  ```bash
-  docker compose down -v
-  docker compose up -d
-  ```
+### Outdated Database Schema
+- **Symptom**: API throws `MySqlException: Table 'railway.refresh_tokens' doesn't exist`.
+- **Solution**: Re-run `Schema/schema.sql` on the database.
 
 ### CORS Errors in Browser
 - **Symptom**: `Access to fetch has been blocked by CORS policy`.
-- **Solution**: In development, client requests go through the Next.js BFF proxy (`/api/proxy/[...path]`), which eliminates CORS issues. Direct calls to `localhost:5000` must include origins configured in `Program.cs` under `DevCors`.
+- **Solution**: Client components must use `/api/proxy/[...path]` rather than calling the backend URL directly from the browser. Direct calls from development hosts must be listed under `DevCors` in `Program.cs`.
