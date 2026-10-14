@@ -1,8 +1,9 @@
 .tableShell {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: 6px;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--color-card, #FFFFFF);
+  box-shadow: none;
 }
 
 .tableWrap {
@@ -11,57 +12,45 @@
 
 .table {
   width: 100%;
+  min-width: 1060px;
   border-collapse: collapse;
-  font-size: 0.9rem;
-  /* Fixed layout makes the table respect the 100% width above instead of
-     always expanding to fit every column's longest unbroken line - long
-     values wrap within their cell instead of forcing horizontal scroll. */
-  table-layout: fixed;
+  text-align: left;
 }
 
 .table th {
-  background: #f3f4f6;
-  color: #111827;
-  font-weight: 700;
-  text-align: left;
-  padding: 0.65rem 0.6rem;
-  border-bottom: 1px solid #e5e7eb;
-  /* Headers are short, terse labels - a mid-word wrap ("PROJEC"/"TS") reads
-     as broken UI, so headers stay on one line and truncate with an ellipsis
-     if the column is too narrow, instead of wrapping like body cells do. */
+  background: var(--color-subtle, #F8F8F6);
+  color: var(--color-text-muted, #999999);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border, #E8E8E5);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Safari keeps a hidden per-cell minimum width based on content even
-     under table-layout: fixed, unless min-width is overridden - without
-     this the table still overflows in Safari even though Chromium-based
-     browsers correctly shrink/wrap it. */
-  min-width: 0;
+  vertical-align: middle;
 }
 
 .table td {
-  padding: 0.65rem 0.6rem;
-  border-bottom: 1px solid #edf0f3;
-  color: #1f2937;
-  overflow-wrap: break-word;
-  min-width: 0;
-}
-
-/* The first column is always the record's own name/title - give it a bit
-   more room than an even split. The last column is always Actions
-   (short Edit/Delete buttons) - cap it instead of splitting evenly too. */
-.table th:first-child,
-.table td:first-child {
-  width: 16%;
+  padding: 12px 14px;
+  border-bottom: 1px solid #F5F5F3;
+  color: var(--color-text-primary, #111111);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  vertical-align: middle;
 }
 
 .table th:last-child,
 .table td:last-child {
-  width: 5.5rem;
+  width: 130px;
+  min-width: 130px;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.table tbody tr:nth-child(even) {
-  background: #fafafa;
+.table tbody tr {
+  transition: background-color 0.12s ease;
 }
 
 /* "Jumped here from elsewhere" marker (see highlightRowId on DataTable) -
@@ -79,7 +68,11 @@
 }
 
 .table tbody tr:hover {
-  background: #f0f7ff;
+  background-color: var(--color-row-hover, #FAFAF8);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .footer {
@@ -87,47 +80,101 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem;
-  border-top: 1px solid #e5e7eb;
-  background: #ffffff;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border, #E8E8E5);
+  background: var(--color-card, #FFFFFF);
 }
 
 .count {
-  color: #4b5563;
-  font-size: 0.9rem;
+  color: var(--color-text-mid, #555555);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.count strong {
+  color: var(--color-text-primary, #111111);
+  font-weight: 600;
 }
 
 .pagination {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 6px;
 }
 
 .button {
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: var(--color-text-mid, #555555);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.45rem 0.75rem;
+  padding: 6px 10px;
+  transition: all 0.12s ease;
 }
 
 .button:hover:not(:disabled) {
-  background: #f3f4f6;
+  background: var(--color-subtle, #F8F8F6);
+  color: var(--color-text-primary, #111111);
+  border-color: #CBD5E1;
 }
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.35;
 }
 
 .expandedCell {
-  background: #f9fafb;
-  padding: 0.85rem 1.1rem;
-  border-bottom: 1px solid #edf0f3;
+  background: #FAFAF9;
+  padding: 14px 18px;
+  border-bottom: 1px solid #F0F0EE;
 }
 
-.empty {
-  padding: 1.25rem;
-  color: #6b7280;
+/* ── Modern Empty State ── */
+.emptyContainer {
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+}
+
+.emptyIconWrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--color-subtle, #F8F8F6);
+  border: 1px solid var(--color-border, #E8E8E5);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.emptyTitle {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #111111);
+  margin-bottom: 4px;
+}
+
+.emptySubtitle {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-mid, #555555);
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.emptyAction {
+  margin-top: 16px;
 }

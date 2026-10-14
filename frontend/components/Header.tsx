@@ -69,13 +69,14 @@ export default function Header({ subtitle }: HeaderProps) {
           <Link href="/platform?view=events" className={navActive("events")}>
             Events
           </Link>
-
           {canUseImportExport(user.role as Role) && (
-            <Link href={IMPORT_EXPORT_HREF} className={navActive(IMPORT_EXPORT_HREF)}>
+            <Link
+              href={IMPORT_EXPORT_HREF}
+              className={navActive(IMPORT_EXPORT_HREF)}
+            >
               Import / Export
             </Link>
           )}
-
           {getPermissions(user.role as Role).analytics !== "no" && (
             <Link href="/analytics" className={navActive("/analytics")}>
               Analytics

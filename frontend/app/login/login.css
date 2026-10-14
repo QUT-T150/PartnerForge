@@ -1,86 +1,96 @@
 .login-page {
-  background: linear-gradient(135deg, #002C5F 0%, #001a3a 100%);
+  background: var(--color-sidebar, #001C3D);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
 }
 
 .login-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  padding: 48px 40px;
+  background: var(--color-card, #FFFFFF);
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: var(--card-radius, 4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  padding: 44px 36px;
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
 }
 
 .brand {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .brand-logo {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 16px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
   display: block;
 }
 
 .brand h1 {
-  font-size: 22px;
-  color: #002C5F;
-  margin-bottom: 6px;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: 20px;
+  color: var(--color-text-primary, #111111);
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .brand .subtitle {
-  color: #6b7280;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  color: var(--color-text-mid, #555555);
+  font-size: 13px;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .form-group label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-mid, #555555);
+  margin-bottom: 5px;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 15px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  font-family: inherit;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: var(--badge-radius, 2px);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-primary, #111111);
+  background: var(--color-card, #FFFFFF);
+  transition: border-color 0.15s ease;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #002C5F;
-  box-shadow: 0 0 0 3px rgba(0, 44, 95, 0.15);
 }
 
 .options-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  font-size: 13px;
+  margin-bottom: 20px;
+  font-size: 12px;
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #6b7280;
+  color: var(--color-text-mid, #555555);
+  font-family: var(--font-sans);
   cursor: pointer;
 }
 
@@ -92,7 +102,8 @@
 .forgot-link {
   color: #002C5F;
   text-decoration: none;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .forgot-link:hover {
@@ -101,49 +112,48 @@
 
 .login-card button[type="submit"] {
   width: 100%;
-  padding: 13px;
+  padding: 10px 14px;
   background: #002C5F;
-  color: white;
+  color: #FFFFFF;
   border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: var(--button-radius, 2px);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s;
-  font-family: inherit;
+  transition: background-color 0.15s ease;
 }
 
 .login-card button[type="submit"]:hover {
-  background: #001a3a;
-}
-
-.login-card button[type="submit"]:active {
-  transform: translateY(1px);
+  background: #001C3D;
 }
 
 .login-card button[type="submit"]:disabled {
-  background: #9ca3af;
+  background: #9CA3AF;
   cursor: not-allowed;
 }
 
 .message {
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--badge-radius, 2px);
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-align: center;
 }
 
 .message.error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
 }
 
 .message.success {
-  background: #f0fdf4;
+  background: #F0FDF4;
   color: #166534;
-  border: 1px solid #bbf7d0;
+  border: 1px solid #BBF7D0;
 }
 
 .message.info {
@@ -152,46 +162,58 @@
   border: 1px solid #bfdbfe;
 }
 
+.demo-pills-wrap,
 .test-accounts {
   margin-top: 20px;
-  padding: 14px;
-  background: #f8f9fb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #4b5563;
-}
-
-.test-accounts strong {
-  color: #002C5F;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.test-accounts code {
-  background: #eef2f7;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-family: Consolas, Monaco, monospace;
-  font-size: 11px;
-}
-
-.test-account-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 8px;
-  cursor: pointer;
+  padding: 12px 14px;
+  background: var(--color-subtle, #F8F8F6);
+  border: 1px solid var(--color-border, #E8E8E5);
   border-radius: 6px;
-  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.test-account-row:hover {
-  background: #e6ebf2;
+.demo-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #999999);
+  white-space: nowrap;
+}
+
+.demo-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.demo-pill {
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border, #E8E8E5);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: #002C5F;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.demo-pill:hover {
+  background: #002C5F;
+  color: #FFFFFF;
+  border-color: #002C5F;
 }
 
 .footer {
   text-align: center;
-  margin-top: 24px;
-  font-size: 13px;
-  color: #6b7280;
+  margin-top: 20px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #999999);
 }

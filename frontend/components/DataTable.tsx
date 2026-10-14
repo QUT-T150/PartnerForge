@@ -1,16 +1,15 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import styles from "./DataTable.module.css";
 
 export interface Column<T> {
   key?: string;
   label: string;
   render?: (row: T) => ReactNode;
-  // Optional explicit column width (e.g. "18%"), used with the fixed table
-  // layout below so wide-content columns (long titles, emails) get more
-  // room than narrow ones (status badges, counts) instead of an even split.
   width?: string;
+  minWidth?: string;
 }
 
 interface DataTableProps<T> {
@@ -22,16 +21,10 @@ interface DataTableProps<T> {
   pageSize?: number;
   onPageChange?: (page: number) => void;
   emptyMessage?: string;
-  // Optional expandable-row support: when a row's id (from getRowId) matches
-  // expandedRowId, an extra full-width row renders right below it via
-  // renderExpandedRow. Callers that don't pass these props are unaffected.
+  emptyAction?: ReactNode;
   expandedRowId?: string | number | null;
   getRowId?: (row: T) => string | number;
   renderExpandedRow?: (row: T) => ReactNode;
-  // Optional "jumped here from elsewhere" marker: when a row's id (from
-  // getRowId) matches highlightRowId, it gets a highlight fill and the
-  // table scrolls it into view - so landing on a 50-row list from a link
-  // elsewhere doesn't leave the user hunting for the right row.
   highlightRowId?: string | number | null;
 }
 
@@ -43,7 +36,8 @@ export default function DataTable<T>({
   page = 1,
   pageSize = 25,
   onPageChange,
-  emptyMessage = "No records to display.",
+  emptyMessage = "No records matching your current filter criteria.",
+  emptyAction,
   expandedRowId,
   getRowId,
   renderExpandedRow,
@@ -82,7 +76,18 @@ export default function DataTable<T>({
   const lastPage = Math.max(1, Math.ceil(resultTotal / pageSize));
 
   if (tableData.length === 0) {
-    return <div className={`empty ${styles.empty}`}>{emptyMessage}</div>;
+    return (
+      <div className={styles.tableShell}>
+        <div className={styles.emptyContainer}>
+          <div className={styles.emptyIconWrap}>
+            <Inbox size={24} strokeWidth={1.5} />
+          </div>
+          <h4 className={styles.emptyTitle}>No records found</h4>
+          <p className={styles.emptySubtitle}>{emptyMessage}</p>
+          {emptyAction && <div className={styles.emptyAction}>{emptyAction}</div>}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -92,7 +97,13 @@ export default function DataTable<T>({
           <thead>
             <tr>
               {columns.map((col) => (
-                <th key={col.key ?? col.label} style={col.width ? { width: col.width } : undefined}>
+                <th
+                  key={col.key ?? col.label}
+                  style={{
+                    width: col.width,
+                    minWidth: col.minWidth,
+                  }}
+                >
                   {col.label}
                 </th>
               ))}
@@ -114,7 +125,10 @@ export default function DataTable<T>({
                     {columns.map((col) => (
                       <td
                         key={col.key ?? col.label}
-                        style={col.width ? { width: col.width } : undefined}
+                        style={{
+                          width: col.width,
+                          minWidth: col.minWidth,
+                        }}
                       >
                         {col.render
                           ? col.render(row)
@@ -138,7 +152,7 @@ export default function DataTable<T>({
       {onPageChange && (
         <div className={styles.footer}>
           <span className={styles.count}>
-            Showing {firstResult}-{lastResult} of {resultTotal} results
+            Showing <strong>{firstResult}–{lastResult}</strong> of <strong>{resultTotal}</strong> records
           </span>
           <div className={styles.pagination}>
             <button
@@ -146,16 +160,20 @@ export default function DataTable<T>({
               type="button"
               onClick={() => onPageChange(page - 1)}
               disabled={page <= 1}
+              aria-label="Previous page"
             >
-              Previous
+              <ChevronLeft size={13} strokeWidth={2} />
+              <span>Previous</span>
             </button>
             <button
               className={styles.button}
               type="button"
               onClick={() => onPageChange(page + 1)}
               disabled={page >= lastPage}
+              aria-label="Next page"
             >
-              Next
+              <span>Next</span>
+              <ChevronRight size={13} strokeWidth={2} />
             </button>
           </div>
         </div>

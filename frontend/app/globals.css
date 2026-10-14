@@ -1,3 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-sidebar: #001C3D;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-sidebar-active: rgba(255, 255, 255, 0.08);
+  --color-brand-primary: #002C5F;
+  --color-canvas: #F7F7F5;
+  --color-card: #FFFFFF;
+  --color-border: #E8E8E5;
+  --color-row-hover: #FAFAF8;
+  --color-subtle: #F8F8F6;
+  --color-text-primary: #111111;
+  --color-text-mid: #555555;
+  --color-text-muted: #999999;
+}
+
+:root {
+  /* Backgrounds */
+  --color-sidebar: #001C3D;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --color-sidebar-active: rgba(255, 255, 255, 0.08);
+  --color-brand-primary: #002C5F;
+  --color-canvas: #F7F7F5;
+  --color-card: #FFFFFF;
+  --color-border: #E8E8E5;
+  --color-row-hover: #FAFAF8;
+  --color-subtle: #F8F8F6;
+
+  /* Text */
+  --color-text-primary: #111111;
+  --color-text-mid: #555555;
+  --color-text-muted: #999999;
+
+  /* Typography */
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Layout & Geometry */
+  --sidebar-width: 200px;
+  --content-pad: 36px 40px;
+  --card-pad: 24px;
+  --card-gap: 12px;
+  --card-radius: 4px;
+  --badge-radius: 2px;
+  --button-radius: 2px;
+}
+
 *,
 *::before,
 *::after {
@@ -7,7 +58,31 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  background-color: var(--color-canvas);
+  color: var(--color-text-primary);
   min-height: 100vh;
-  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Category Label Pattern */
+.category-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+/* Xenova Page Heading Pattern */
+.page-heading {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }

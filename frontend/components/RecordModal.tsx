@@ -1,6 +1,5 @@
-"use client";
-
 import { useState, useEffect, type FormEvent } from "react";
+import { X } from "lucide-react";
 import AuditHistoryPanel from "./AuditHistoryPanel";
 
 export type FieldDef = [
@@ -30,13 +29,9 @@ interface RecordModalProps {
   industries?: Industry[];
   isNew: boolean;
   onClose: () => void;
-  onSubmit: (data: Record<string, unknown>) => void;
+  onSubmit: (data: Record<string, unknown>) => Promise<void> | void;
   tableName?: string;
   canViewHistory?: boolean;
-  // When true, this is a quick read-only peek opened from elsewhere (e.g. a
-  // project's Partner cell, or an organisation's expanded Projects list)
-  // rather than this record's own Edit action - the view-mode Edit button is
-  // replaced with a plain link (peekLinkLabel) that runs onPeekNavigate.
   peekMode?: boolean;
   peekLinkLabel?: string;
   onPeekNavigate?: () => void;
@@ -78,10 +73,9 @@ export default function RecordModal({
   peekLinkLabel = "View record",
   onPeekNavigate,
 }: RecordModalProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"form" | "history">("form");
-  // Existing records open read-only first - "Edit partner" full of input
-  // boxes reads like a blank form to fill in, not a record to look at.
-  // New records skip straight to the form since there is nothing to view yet.
   const [detailMode, setDetailMode] = useState<"view" | "edit">(
     isNew ? "edit" : "view",
   );
@@ -96,41 +90,70 @@ export default function RecordModal({
 
   if (!open) return null;
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const data: Record<string, unknown> = Object.fromEntries(form.entries());
+    setError(null);
+    setSubmitting(true);
 
-    ["industryId", "facultyId", "year", "proposedYear", "proposedFacultyId"].forEach(
-      (key) => {
-        data[key] = data[key] ? Number(data[key]) : null;
-      },
-    );
-    ["contactId", "organisationId"].forEach((key) => {
-      data[key] = data[key] || null;
-    });
-    if (data.isActive !== undefined) data.isActive = data.isActive === "true";
-    if (data.multipleTeams !== undefined) {
-      data.multipleTeams = data.multipleTeams === "true";
-    }
-    if (data.proposedMultipleTeams !== undefined) {
-      data.proposedMultipleTeams = data.proposedMultipleTeams === "true";
-    }
-    if (data.password === "") data.password = null;
+    try {
+      const form = new FormData(e.currentTarget);
+      const data: Record<string, unknown> = Object.fromEntries(form.entries());
 
-    onSubmit(data);
+      ["industryId", "facultyId", "year", "proposedYear", "proposedFacultyId"].forEach(
+        (key) => {
+          data[key] = data[key] ? Number(data[key]) : null;
+        },
+      );
+      ["contactId", "organisationId"].forEach((key) => {
+        data[key] = data[key] || null;
+      });
+      if (data.isActive !== undefined) data.isActive = data.isActive === "true";
+      if (data.multipleTeams !== undefined) {
+        data.multipleTeams = data.multipleTeams === "true";
+      }
+      if (data.proposedMultipleTeams !== undefined) {
+        data.proposedMultipleTeams = data.proposedMultipleTeams === "true";
+      }
+      if (data.password === "") data.password = null;
+
+      await onSubmit(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save record.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <div className="modal-overlay active" onClick={onClose}>
+    <div
+      className="modal-overlay active"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         className="modal"
         onClick={(e) => e.stopPropagation()}
         style={view === "history" ? { maxWidth: "800px", width: "90vw" } : undefined}
       >
-        <h2>
-          {isNew ? `Add ${title}` : detailMode === "edit" ? `Edit ${title}` : `View ${title}`}
-        </h2>
+        <div className="modal-header">
+          <div className="modal-title-wrap">
+            <span className="category-label">Record Management</span>
+            <h2>
+              {isNew ? `Add ${title}` : detailMode === "edit" ? `Edit ${title}` : `View ${title}`}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={18} strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {error && <div className="modal-error-banner">{error}</div>}
 
         {!isNew && canViewHistory && (
           <div style={{ display: "flex", gap: "8px", marginBottom: "12px", borderBottom: "1px solid #e2e2e2" }}>
@@ -233,15 +256,17 @@ export default function RecordModal({
           <div className="form-grid">
             {fields.map(([name, label, inputType, required, options]) => {
               const value = record[name] ?? defaultValue(name) ?? "";
-              const isRequired =
-                required || (isNew && name === "password");
+              const isRequired = required || (isNew && name === "password");
               const full = inputType === "textarea" ? " full" : "";
               const inputId = `field-${name}`;
 
               if (inputType === "textarea") {
                 return (
                   <div key={name} className={`form-group${full}`}>
-                    <label htmlFor={inputId}>{label}</label>
+                    <label htmlFor={inputId}>
+                      {label}
+                      {isRequired && <span className="required-star">*</span>}
+                    </label>
                     <textarea
                       id={inputId}
                       name={name}
@@ -255,7 +280,10 @@ export default function RecordModal({
               if (inputType === "select" && options) {
                 return (
                   <div key={name} className="form-group">
-                    <label htmlFor={inputId}>{label}</label>
+                    <label htmlFor={inputId}>
+                      {label}
+                      {isRequired && <span className="required-star">*</span>}
+                    </label>
                     <select
                       id={inputId}
                       name={name}
@@ -275,7 +303,10 @@ export default function RecordModal({
               if (inputType === "select-org") {
                 return (
                   <div key={name} className="form-group">
-                    <label htmlFor={inputId}>{label}</label>
+                    <label htmlFor={inputId}>
+                      {label}
+                      {isRequired && <span className="required-star">*</span>}
+                    </label>
                     <select
                       id={inputId}
                       name={name}
@@ -295,7 +326,10 @@ export default function RecordModal({
               if (inputType === "select-org-empty") {
                 return (
                   <div key={name} className="form-group">
-                    <label htmlFor={inputId}>{label}</label>
+                    <label htmlFor={inputId}>
+                      {label}
+                      {isRequired && <span className="required-star">*</span>}
+                    </label>
                     <select
                       id={inputId}
                       name={name}
@@ -316,7 +350,10 @@ export default function RecordModal({
               if (inputType === "select-industry") {
                 return (
                   <div key={name} className="form-group">
-                    <label htmlFor={inputId}>{label}</label>
+                    <label htmlFor={inputId}>
+                      {label}
+                      {isRequired && <span className="required-star">*</span>}
+                    </label>
                     <select
                       id={inputId}
                       name={name}
@@ -336,7 +373,10 @@ export default function RecordModal({
 
               return (
                 <div key={name} className={`form-group${full}`}>
-                  <label htmlFor={inputId}>{label}</label>
+                  <label htmlFor={inputId}>
+                    {label}
+                    {isRequired && <span className="required-star">*</span>}
+                  </label>
                   <input
                     id={inputId}
                     name={name}
@@ -348,16 +388,22 @@ export default function RecordModal({
               );
             })}
           </div>
+
           <div className="modal-actions">
             <button
               type="button"
               className="secondary-btn"
               onClick={() => (isNew ? onClose() : setDetailMode("view"))}
+              disabled={submitting}
             >
               Cancel
             </button>
-            <button type="submit" className="primary-btn">
-              Save
+            <button
+              type="submit"
+              className="primary-btn"
+              disabled={submitting}
+            >
+              {submitting ? "Saving..." : "Save Record"}
             </button>
           </div>
         </form>

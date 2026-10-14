@@ -1,0 +1,195 @@
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background-color: var(--color-sidebar, #001C3D);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+  z-index: 40;
+}
+
+.brand {
+  padding: 20px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #ffffff;
+  transition: opacity 0.15s ease;
+}
+
+.brand:hover {
+  opacity: 0.95;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandTitle {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.brandTagline {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+  margin-top: 2px;
+}
+
+.navSection {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.navHeading {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding: 8px 10px 4px 10px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 450;
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: all 0.12s ease;
+}
+
+.navItem:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.navItemActive {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-weight: 550;
+}
+
+.navIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.12s ease;
+}
+
+.navItem:hover .navIcon,
+.navItemActive .navIcon {
+  color: #ffffff;
+}
+
+.footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profileMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.userName {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.roleBadge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  color: #94a3b8;
+  text-transform: capitalize;
+  margin-top: 1px;
+}
+
+.signOutBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.signOutBtn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+}

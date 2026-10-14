@@ -16,6 +16,16 @@ import {
   type SearchRequest,
   type SearchResponse,
 } from "@/lib/api/search";
+import {
+  SlidersHorizontal,
+  ChevronDown,
+  Plus,
+  X,
+  Layers,
+  Bookmark,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import styles from "./FilterBuilder.module.css";
 
 interface FilterBuilderProps<T = Record<string, unknown>> {
@@ -628,128 +638,125 @@ export default function FilterBuilder<T = Record<string, unknown>>({
           onClick={onRemove}
           aria-label="Remove filter"
         >
-          &times;
+          <X size={14} strokeWidth={2} />
         </button>
       </div>
     );
   }
 
   return (
-    <section>
+    <div className={styles.container}>
       {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
-        <button
-          type="button"
-          className={`${styles.toggle} ${totalActive > 0 ? styles.toggleActive : ""}`}
-          onClick={() => setOpen((v) => !v)}
-        >
-          Filters
-          {totalActive > 0 && (
-            <span className={styles.badge}>{totalActive}</span>
-          )}
-          <span
-            className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}
+        <div className={styles.toolbarLeft}>
+          <button
+            type="button"
+            className={`${styles.toggle} ${totalActive > 0 ? styles.toggleActive : ""}`}
+            onClick={() => setOpen((v) => !v)}
           >
-            &#9662;
-          </span>
-        </button>
-
-        {savedFilters.length > 0 && (
-          <div className={styles.savedActions}>
-            <select
-              className={styles.select}
-              value={selectedSavedFilterId}
-              onChange={(e) => handleSavedFilterSelect(e.target.value)}
-              disabled={loading}
-            >
-              <option value="">Saved filters</option>
-              {savedFilters.map((filter) => (
-                <option key={filter.id} value={filter.id}>
-                  {filter.name}
-                </option>
-              ))}
-            </select>
-            {selectedSavedFilter && (
-              <button
-                type="button"
-                className={styles.dangerButton}
-                onClick={() => handleDeleteSavedFilter(selectedSavedFilter.id)}
-                disabled={loading}
-                aria-label={`Delete ${selectedSavedFilter.name}`}
-              >
-                &times;
-              </button>
+            <SlidersHorizontal size={13} strokeWidth={2} />
+            <span>Filter</span>
+            {totalActive > 0 && (
+              <span className={styles.badge}>{totalActive}</span>
             )}
-          </div>
-        )}
+            <ChevronDown
+              size={13}
+              strokeWidth={2}
+              className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}
+            />
+          </button>
 
-        {totalActive > 0 && (
-          <span className={styles.activeCount}>
-            {activeFilters.length > 0 &&
-              `${activeFilters.length} filter${activeFilters.length !== 1 ? "s" : ""}`}
-            {activeFilters.length > 0 && totalRelatedConditions > 0 && ", "}
-            {totalRelatedConditions > 0 &&
-              `${totalRelatedConditions} related condition${totalRelatedConditions !== 1 ? "s" : ""}`}
-          </span>
-        )}
-      </div>
+          {/* Quick-apply saved filter pills */}
+          {savedFilters.length > 0 && (
+            <div className={styles.presetPills}>
+              <span className={styles.presetPillsLabel}>Presets:</span>
+              {savedFilters.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  className={`${styles.presetPill} ${
+                    selectedSavedFilterId === filter.id
+                      ? styles.presetPillActive
+                      : ""
+                  }`}
+                  onClick={() => handleSavedFilterSelect(filter.id)}
+                  disabled={loading}
+                >
+                  <Bookmark size={11} strokeWidth={2} />
+                  <span>{filter.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* ── Quick-apply saved filter pills (always visible) ── */}
-      {savedFilters.length > 0 && (
-        <div className={styles.quickFilters}>
-          <span className={styles.quickFiltersLabel}>Quick filters:</span>
-          {savedFilters.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              className={`${styles.quickFilterPill} ${
-                selectedSavedFilterId === filter.id
-                  ? styles.quickFilterPillActive
-                  : ""
-              }`}
-              onClick={() => handleSavedFilterSelect(filter.id)}
-              disabled={loading}
-            >
-              {filter.name}
-            </button>
-          ))}
-          {selectedSavedFilterId && (
+        <div className={styles.toolbarRight}>
+          {totalActive > 0 && (
+            <span className={styles.activeSummary}>
+              {activeFilters.length > 0 &&
+                `${activeFilters.length} filter${activeFilters.length !== 1 ? "s" : ""}`}
+              {activeFilters.length > 0 && totalRelatedConditions > 0 && ", "}
+              {totalRelatedConditions > 0 &&
+                `${totalRelatedConditions} related`}
+            </span>
+          )}
+
+          {(totalActive > 0 || selectedSavedFilterId) && (
             <button
               type="button"
-              className={styles.quickFilterClear}
+              className={styles.clearAllBtn}
               onClick={handleClear}
               disabled={loading}
+              title="Reset all filters"
             >
-              Clear
+              <RotateCcw size={12} strokeWidth={2} />
+              <span>Reset</span>
             </button>
           )}
         </div>
-      )}
+      </div>
 
       {/* ── Expanded panel ── */}
       {open && (
         <div className={styles.panel}>
-          {/* Direct filters */}
-          <span className={styles.sectionLabel}>Conditions</span>
-
-          {rows.map((row) =>
-            renderFilterRow(
-              row,
-              fields,
-              (fieldName) => handleFieldChange(row, fieldName),
-              (patch) => updateRow(row.id, patch),
-              () =>
-                setRows((current) =>
-                  current.filter((r) => r.id !== row.id),
-                ),
-            ),
-          )}
-
-          {rows.length === 0 && (
-            <div className={styles.emptyHint}>
-              No filters applied. Click &quot;+ Add filter&quot; to start.
+          <div className={styles.panelHeader}>
+            <div className={styles.panelTitleWrap}>
+              <span className={styles.panelTitle}>Filter Rules</span>
+              <span className={styles.panelSubtitle}>
+                Apply criteria to narrow down records
+              </span>
             </div>
-          )}
+            <button
+              type="button"
+              className={styles.closePanelBtn}
+              onClick={() => setOpen(false)}
+              aria-label="Close filters"
+            >
+              <X size={14} strokeWidth={2} />
+            </button>
+          </div>
+
+          {/* Direct filters */}
+          <div className={styles.conditionRows}>
+            {rows.map((row) =>
+              renderFilterRow(
+                row,
+                fields,
+                (fieldName) => handleFieldChange(row, fieldName),
+                (patch) => updateRow(row.id, patch),
+                () =>
+                  setRows((current) =>
+                    current.filter((r) => r.id !== row.id),
+                  ),
+              ),
+            )}
+
+            {rows.length === 0 && (
+              <div className={styles.emptyHint}>
+                No filter rules applied. Click &quot;+ Add condition&quot; to begin.
+              </div>
+            )}
+          </div>
 
           {/* Related condition groups */}
           {relatedGroups.length > 0 && (
@@ -796,7 +803,7 @@ export default function FilterBuilder<T = Record<string, unknown>>({
                       onClick={() => removeRelatedGroup(group.id)}
                       aria-label="Remove related group"
                     >
-                      &times;
+                      <X size={14} strokeWidth={2} />
                     </button>
                   </div>
 
@@ -824,10 +831,11 @@ export default function FilterBuilder<T = Record<string, unknown>>({
 
                       <button
                         type="button"
-                        className={`${styles.button} ${styles.subtleButton}`}
+                        className={styles.button}
                         onClick={() => addRelatedRow(group.id)}
                       >
-                        + Add condition
+                        <Plus size={13} strokeWidth={2} />
+                        <span>Add condition</span>
                       </button>
                     </div>
                   )}
@@ -838,43 +846,47 @@ export default function FilterBuilder<T = Record<string, unknown>>({
 
           {/* Action buttons */}
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.outlineButton}`}
-              onClick={() =>
-                setRows((current) => [...current, createEmptyRow()])
-              }
-            >
-              + Add filter
-            </button>
-            {relationships.length > 0 && (
+            <div className={styles.actionsLeft}>
               <button
                 type="button"
                 className={`${styles.button} ${styles.outlineButton}`}
-                onClick={addRelatedGroup}
+                onClick={() =>
+                  setRows((current) => [...current, createEmptyRow()])
+                }
               >
-                + Related table
+                <Plus size={13} strokeWidth={2} />
+                <span>Add condition</span>
               </button>
-            )}
+              {relationships.length > 0 && (
+                <button
+                  type="button"
+                  className={`${styles.button} ${styles.outlineButton}`}
+                  onClick={addRelatedGroup}
+                >
+                  <Layers size={13} strokeWidth={2} />
+                  <span>Related table</span>
+                </button>
+              )}
+            </div>
 
-            <span style={{ flex: 1 }} />
-
-            <button
-              type="button"
-              className={styles.button}
-              onClick={handleClear}
-              disabled={loading}
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.primaryButton}`}
-              onClick={handleApply}
-              disabled={loading || initialising}
-            >
-              {loading ? "Searching..." : "Apply filters"}
-            </button>
+            <div className={styles.actionsRight}>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.ghostButton}`}
+                onClick={handleClear}
+                disabled={loading || (rows.length === 0 && relatedGroups.length === 0)}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.primaryButton}`}
+                onClick={handleApply}
+                disabled={loading || initialising}
+              >
+                {loading ? "Searching..." : "Apply filters"}
+              </button>
+            </div>
           </div>
 
           {/* ── Inline save form ── */}
@@ -889,7 +901,8 @@ export default function FilterBuilder<T = Record<string, unknown>>({
                   (activeFilters.length === 0 && totalRelatedConditions === 0)
                 }
               >
-                Save current filters
+                <Bookmark size={12} strokeWidth={2} />
+                <span>Save current filters as preset</span>
               </button>
             ) : (
               <div className={styles.saveForm}>
@@ -918,7 +931,7 @@ export default function FilterBuilder<T = Record<string, unknown>>({
                 </button>
                 <button
                   type="button"
-                  className={styles.button}
+                  className={`${styles.button} ${styles.ghostButton}`}
                   onClick={() => {
                     setSaveMode(false);
                     setSaveName("");
@@ -932,26 +945,30 @@ export default function FilterBuilder<T = Record<string, unknown>>({
 
           {/* Saved filters list */}
           {savedFilters.length > 0 && (
-            <div className={styles.savedList}>
-              <div className={styles.savedListLabel}>Saved presets</div>
+            <div className={styles.presetPills} style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #EBEBE7" }}>
+              <span className={styles.presetPillsLabel}>Presets:</span>
               {savedFilters.map((filter) => (
-                <div className={styles.savedItem} key={filter.id}>
+                <div key={filter.id} style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
                   <button
                     type="button"
-                    className={styles.savedItemName}
+                    className={`${styles.presetPill} ${
+                      selectedSavedFilterId === filter.id ? styles.presetPillActive : ""
+                    }`}
                     onClick={() => handleSavedFilterSelect(filter.id)}
                     disabled={loading}
                   >
-                    {filter.name}
+                    <Bookmark size={11} strokeWidth={2} />
+                    <span>{filter.name}</span>
                   </button>
                   <button
                     type="button"
-                    className={styles.savedItemDelete}
+                    className={styles.removeButton}
                     onClick={() => handleDeleteSavedFilter(filter.id)}
                     disabled={loading}
                     aria-label={`Delete ${filter.name}`}
+                    title="Delete preset"
                   >
-                    Delete
+                    <Trash2 size={12} strokeWidth={2} />
                   </button>
                 </div>
               ))}
@@ -963,6 +980,6 @@ export default function FilterBuilder<T = Record<string, unknown>>({
       )}
 
       {!open && error && <div className={styles.error}>{error}</div>}
-    </section>
+    </div>
   );
 }

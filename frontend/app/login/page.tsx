@@ -50,24 +50,46 @@ function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data: { fullName?: string; error?: string } | null = null;
+      const isJson = res.headers.get("content-type")?.includes("application/json");
+
+      if (isJson) {
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || `Login failed (HTTP ${res.status}).`);
+        const errorText =
+          data?.error ||
+          (res.status === 404
+            ? "Authentication endpoint not found. Please verify the server is running on the correct port."
+            : res.status === 502 || res.status === 503
+            ? "Backend API service is unavailable. Please verify the backend API is online."
+            : `Login failed (HTTP ${res.status}).`);
+        throw new Error(errorText);
+      }
+
+      if (!data) {
+        throw new Error("Invalid response received from authentication service.");
       }
 
       setMessage({
         type: "success",
-        text: `Welcome, ${data.fullName}. Redirecting...`,
+        text: `Welcome, ${data.fullName || "User"}. Redirecting...`,
       });
 
       setTimeout(() => router.push(nextPath), 600);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred.";
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during sign in.";
       setMessage({
         type: "error",
-        text: errorMessage + " Is the API running on port 8080?",
+        text: errorMessage,
       });
     } finally {
       setSubmitting(false);
@@ -90,8 +112,9 @@ function LoginForm() {
             width={48}
             height={48}
           />
+          <div className="category-label">PARTNERFORGE — AUTHENTICATION</div>
           <h1>Industry Relations Database</h1>
-          <p className="subtitle">Sign in to access the dashboard</p>
+          <p className="subtitle">Sign in to access your platform workspace</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -140,18 +163,20 @@ function LoginForm() {
           )}
         </form>
 
-        <div className="test-accounts">
-          <strong>Test accounts (click to autofill)</strong>
-          {TEST_ACCOUNTS.map((account) => (
-            <div
-              key={account.email}
-              className="test-account-row"
-              onClick={() => autofill(account)}
-            >
-              <span>{account.label}</span>
-              <code>{account.email}</code>
-            </div>
-          ))}
+        <div className="demo-pills-wrap">
+          <span className="demo-label">Demo Quick-Fill</span>
+          <div className="demo-pills">
+            {TEST_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                className="demo-pill"
+                onClick={() => autofill(account)}
+              >
+                {account.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <p className="footer">
