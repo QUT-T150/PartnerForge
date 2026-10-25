@@ -251,6 +251,7 @@ export default function ImportExportPage() {
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [dryRun, setDryRun] = useState(false);
   const [copiedHeaders, setCopiedHeaders] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -782,23 +783,42 @@ export default function ImportExportPage() {
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isPending || missingRequiredFields.length > 0}
-                  className="primary-btn submit-import-btn"
-                >
-                  {isPending ? (
-                    <>
-                      <RefreshCw size={14} className="spin" />
-                      <span>Ingesting records…</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight size={14} />
-                      <span>Import into {currentPreset.label}</span>
-                    </>
-                  )}
-                </button>
+                <div className="submit-actions">
+                  <label className="dry-run-toggle">
+                    <input
+                      type="checkbox"
+                      name="dryRun"
+                      value="true"
+                      checked={dryRun}
+                      onChange={(e) => setDryRun(e.target.checked)}
+                    />
+                    <span>
+                      <strong>Dry run</strong> — validate rows without writing to the database
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isPending || missingRequiredFields.length > 0}
+                    className="primary-btn submit-import-btn"
+                  >
+                    {isPending ? (
+                      <>
+                        <RefreshCw size={14} className="spin" />
+                        <span>{dryRun ? "Validating rows…" : "Ingesting records…"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight size={14} />
+                        <span>
+                          {dryRun
+                            ? `Validate for ${currentPreset.label}`
+                            : `Import into ${currentPreset.label}`}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </form>
@@ -821,7 +841,13 @@ export default function ImportExportPage() {
                   <AlertCircle size={18} />
                 )}
                 <div className="result-alert-title">
-                  {state.status === "success"
+                  {state.dryRun
+                    ? state.status === "success"
+                      ? "Dry Run Passed: All Rows Valid"
+                      : state.status === "partial"
+                      ? "Dry Run: Some Rows Invalid"
+                      : "Dry Run: No Valid Rows"
+                    : state.status === "success"
                     ? "Import Completed Successfully"
                     : state.status === "partial"
                     ? "Partial Import Completed"
@@ -839,7 +865,7 @@ export default function ImportExportPage() {
                   )}
                   {state.succeeded !== undefined && (
                     <div className="stat-pill stat-inserted">
-                      Succeeded: <strong>{state.succeeded}</strong>
+                      {state.dryRun ? "Valid" : "Succeeded"}: <strong>{state.succeeded}</strong>
                     </div>
                   )}
                   {state.failed !== undefined && state.failed > 0 && (
