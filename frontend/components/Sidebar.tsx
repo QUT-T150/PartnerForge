@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Calendar,
   ArrowUpDown,
+  BarChart3,
   Users,
   ShieldCheck,
   LogOut,
@@ -29,11 +30,13 @@ export default function Sidebar() {
   const isOnPlatform = pathname === "/platform";
   const isOnAuditLog = pathname === "/audit-log";
   const isOnImportExport = pathname === "/import-export";
+  const isOnAnalytics = pathname === "/analytics";
 
   function isActive(target: string): boolean {
     if (target === "/dashboard") return isOnDashboard;
     if (target === "/audit-log") return isOnAuditLog;
     if (target === "/import-export") return isOnImportExport;
+    if (target === "/analytics") return isOnAnalytics;
     if (isOnPlatform && currentView === target) return true;
     return false;
   }
@@ -102,6 +105,18 @@ export default function Sidebar() {
           <Calendar className={styles.navIcon} size={16} strokeWidth={1.8} />
           <span>Events</span>
         </Link>
+
+        {getPermissions(user.role as Role).analytics !== "no" && (
+          <Link
+            href="/analytics"
+            className={`${styles.navItem} ${
+              isActive("/analytics") ? styles.navItemActive : ""
+            }`}
+          >
+            <BarChart3 className={styles.navIcon} size={16} strokeWidth={1.8} />
+            <span>Analytics</span>
+          </Link>
+        )}
 
         {getPermissions(user.role as Role).upload !== "no" && (
           <Link
